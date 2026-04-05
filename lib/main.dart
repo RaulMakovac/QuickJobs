@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ekrani/intro.dart';
 import 'ekrani/registracija.dart'; 
 import 'ekrani/login.dart';
 import 'ekrani/odabir.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
+import 'ekrani/glavni_ekran.dart';
+import 'ekrani/objava_oglasa.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -16,6 +17,9 @@ void main() async {
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL'] ?? '', 
     anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+    authOptions: const FlutterAuthClientOptions(
+    authFlowType: AuthFlowType.pkce, // Moderniji i sigurniji način za mobitele
+  ),
   );
 
   runApp(const MyApp());
@@ -40,6 +44,8 @@ class MyApp extends StatelessWidget {
       '/ekrani/registracija': (context) => const registracija(),
       '/ekrani/login': (context) => const login(),
       '/ekrani/odabir': (context) => const odabir(),
+      '/ekrani/glavni_ekran': (context) => const glavni_ekran(),
+      '/ekrani/objava_oglasa': (context) => const ObjavaOglasa(),
     },
   );
   }

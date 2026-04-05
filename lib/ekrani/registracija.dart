@@ -32,7 +32,7 @@ class _registracijaState extends State<registracija> {
 
   // Funkcija za registraciju s navigacijom nakon uspjeha
   Future<void> _signUp() async {
-    if (_imeController.text.isEmpty || _emailController.text.isEmpty || _lozinkaController.text.isEmpty) {
+    if (_imeController.text.isEmpty || _emailController.text.isEmpty || _lozinkaController.text.isEmpty || _telefonController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Molimo popunite sva obavezna polja')));
       return;
     }
@@ -47,7 +47,10 @@ class _registracijaState extends State<registracija> {
       await supabase.auth.signUp(
         email: _emailController.text.trim(),
         password: _lozinkaController.text.trim(),
-        data: {'ime_prezime': _imeController.text.trim()},
+        data: {
+          'puno_ime': _imeController.text.trim(),
+          'telefon': _telefonController.text.trim(),
+          },
       );
       
       if (mounted) {

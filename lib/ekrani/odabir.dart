@@ -18,21 +18,9 @@ class odabir extends StatelessWidget {
       body: Stack(
         children: [
           // POZADINSKI KRUGOVI
-          Positioned(
-            top: -50,
-            left: -50,
-            child: _CircleCustom(size: 200),
-          ),
-          Positioned(
-            top: 50,
-            left: -80,
-            child: _CircleCustom(size: 250),
-          ),
-          Positioned(
-            bottom: -100,
-            right: -50,
-            child: _CircleCustom(size: 300),
-          ),
+          Positioned(top: -50, left: -50, child: _CircleCustom(size: 200)),
+          Positioned(top: 50, left: -80, child: _CircleCustom(size: 250)),
+          Positioned(bottom: -100, right: -50, child: _CircleCustom(size: 300)),
 
           SafeArea(
             child: Padding(
@@ -87,33 +75,40 @@ class odabir extends StatelessWidget {
                       _buildRoleCard(
                         context,
                         title: 'Tražim radnika',
-                        svgPath: 'assets/images/radnik.svg', // <-- OVDJE UBACI SVOJ SVG
+                        svgPath: 'assets/images/trazim_radnika.svg',
                         onTap: () {
-                          print('Odabrano: Tražim radnika');
+                          // Vodi na novi ekran s oglasima
+                          Navigator.pushNamed(context, '/ekrani/glavni_ekran');
                         },
                       ),
                       _buildRoleCard(
                         context,
                         title: 'Tražim posao',
-                        svgPath: 'assets/images/posao.svg', // <-- OVDJE UBACI SVOJ SVG
+                        svgPath: 'assets/images/trazim_posao.svg',
                         onTap: () {
-                          print('Odabrano: Tražim posao');
+                          // Također vodi na isti ekran (ili neki drugi ako želiš)
+                          Navigator.pushNamed(context, '/ekrani/glavni_ekran');
                         },
                       ),
                     ],
                   ),
-
                   const Spacer(),
 
                   // DONJA ILUSTRACIJA
                   Padding(
                     padding: const EdgeInsets.only(bottom: 20.0),
                     child: SvgPicture.asset(
-                      'assets/images/bottom_illustration.svg', // <-- OVDJE UBACI DONJI SVG
+                      'assets/images/upitnik.svg', // <-- OVDJE UBACI DONJI SVG
                       height: 180,
                       placeholderBuilder: (context) => const SizedBox(
                         height: 180,
-                        child: Center(child: Icon(Icons.image, size: 50, color: circleColor)),
+                        child: Center(
+                          child: Icon(
+                            Icons.image,
+                            size: 50,
+                            color: circleColor,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -127,8 +122,12 @@ class odabir extends StatelessWidget {
   }
 
   // Funkcija za izgradnju pojedinačne kartice (Role Card)
-  Widget _buildRoleCard(BuildContext context,
-      {required String title, required String svgPath, required VoidCallback onTap}) {
+  Widget _buildRoleCard(
+    BuildContext context, {
+    required String title,
+    required String svgPath,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -157,7 +156,11 @@ class odabir extends StatelessWidget {
                 // Placeholder dok ne ubaciš prave fileove da ti se ne ruši app
                 placeholderBuilder: (context) => Container(
                   color: backgroundColor,
-                  child: const Icon(Icons.person, size: 40, color: cardBorderColor),
+                  child: const Icon(
+                    Icons.person,
+                    size: 40,
+                    color: cardBorderColor,
+                  ),
                 ),
               ),
             ),
