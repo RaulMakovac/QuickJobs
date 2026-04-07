@@ -7,26 +7,27 @@ import 'ekrani/login.dart';
 import 'ekrani/odabir.dart';
 import 'ekrani/glavni_ekran.dart';
 import 'ekrani/objava_oglasa.dart';
+import 'ekrani/job_hub.dart';
+import 'ekrani/moji_oglasi.dart';
+import 'ekrani/korisnicki_profil.dart';
+
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Učitavanje .env datoteke
   await dotenv.load(fileName: ".env");
-
   // Inicijalizacija Supabasea koristeći dotenv
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL'] ?? '', 
     anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
     authOptions: const FlutterAuthClientOptions(
-    authFlowType: AuthFlowType.pkce, // Moderniji i sigurniji način za mobitele
+    authFlowType: AuthFlowType.pkce,
   ),
   );
 
   runApp(const MyApp());
 }
-
-
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -34,11 +35,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'QuickJobs',
-      debugShowCheckedModeBanner: false, // Miče onaj "Debug" natpis u kutu
-      
-     initialRoute: '/', 
-    
-    // 2. Mapa svih stranica u aplikaciji
+      debugShowCheckedModeBanner: false, // Miče debug watermark
+
+     initialRoute: '/ekrani/glavni_ekran',
+
+    // rute
     routes: {
       '/': (context) => const intro(),
       '/ekrani/registracija': (context) => const registracija(),
@@ -46,6 +47,10 @@ class MyApp extends StatelessWidget {
       '/ekrani/odabir': (context) => const odabir(),
       '/ekrani/glavni_ekran': (context) => const glavni_ekran(),
       '/ekrani/objava_oglasa': (context) => const ObjavaOglasa(),
+      '/ekrani/job_hub': (context) => const MojiPosloviHub(),
+      '/ekrani/moji_oglasi': (context) => const MojiOglasi(),
+      '/ekrani/korisnicki_profil': (context) => const KorisnickiProfil(),
+
     },
   );
   }

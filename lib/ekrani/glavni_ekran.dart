@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:quickjobs/ekrani/oglas.dart';
-
+import 'korisnicki_profil.dart';
 
 class Oglas {
   final String id;
@@ -35,7 +35,9 @@ class Oglas {
       adresa: json['adresa'] ?? '',
       status: json['status'] ?? 'otvoren',
       createdAt: DateTime.parse(json['created_at']),
-      autorIme: profileData != null ? profileData['puno_ime'] : 'Nepoznat autor',
+      autorIme: profileData != null
+          ? profileData['puno_ime']
+          : 'Nepoznat autor',
     );
   }
 }
@@ -62,7 +64,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
           .from('oglasi')
           .select('*, autor:profiles!oglasi_autor_id_fkey(puno_ime)')
           .order('created_at', ascending: false);
-      
+
       final List data = response as List;
       return data.map((json) => Oglas.fromJson(json)).toList();
     } catch (e) {
@@ -70,7 +72,6 @@ class _glavni_ekranState extends State<glavni_ekran> {
       return [];
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -85,9 +86,27 @@ class _glavni_ekranState extends State<glavni_ekran> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  // Postavke (lijevo)
                   const Icon(Icons.settings, size: 35, color: darkBrown),
+
                   _buildCentralLogo(),
-                  const Icon(Icons.account_box, size: 35, color: darkBrown),
+
+                  // Profil (desno) s funkcijom tipke
+                  IconButton(
+                    icon: const Icon(
+                      Icons.account_box,
+                      size: 35,
+                      color: darkBrown,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const KorisnickiProfil(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -119,7 +138,9 @@ class _glavni_ekranState extends State<glavni_ekran> {
                 future: dohvatiOglase(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator(color: darkBrown));
+                    return const Center(
+                      child: CircularProgressIndicator(color: darkBrown),
+                    );
                   }
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return const Center(child: Text("Trenutno nema oglasa."));
@@ -157,15 +178,13 @@ class _glavni_ekranState extends State<glavni_ekran> {
   }
 
   // --- OVDJE JE PROMJENA: DODAN GESTURE DETECTOR ---
- Widget _buildOglasCard(Oglas oglas) {
+  Widget _buildOglasCard(Oglas oglas) {
     return GestureDetector(
       onTap: () {
         // AKTIVIRANO: Sada šaljemo oglas na DetaljiOglasa ekran
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => DetaljiOglasa(oglas: oglas),
-          ),
+          MaterialPageRoute(builder: (context) => DetaljiOglasa(oglas: oglas)),
         );
       },
       child: Container(
@@ -197,7 +216,11 @@ class _glavni_ekranState extends State<glavni_ekran> {
                   ),
                   Text(
                     oglas.naslov,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17,
+                    ),
                   ),
                   Text(
                     'Autor: ${oglas.autorIme}',
@@ -208,7 +231,11 @@ class _glavni_ekranState extends State<glavni_ekran> {
                     alignment: Alignment.bottomRight,
                     child: Text(
                       'Isplata: ${oglas.isplata}€',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 ],
@@ -229,12 +256,18 @@ class _glavni_ekranState extends State<glavni_ekran> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          const Icon(Icons.handyman, size: 35, color: Colors.black),
+          GestureDetector(
+            onTap: () => Navigator.pushNamed(context, '/ekrani/job_hub'),
+            child: const Icon(Icons.handyman, size: 35, color: Colors.black),
+          ),
           GestureDetector(
             onTap: () => Navigator.pushNamed(context, '/ekrani/objava_oglasa'),
             child: Container(
               padding: const EdgeInsets.all(10),
-              decoration: const BoxDecoration(color: Color(0xFF6D3F3A), shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                color: Color(0xFF6D3F3A),
+                shape: BoxShape.circle,
+              ),
               child: const Icon(Icons.add, color: Colors.white, size: 30),
             ),
           ),
@@ -244,5 +277,3 @@ class _glavni_ekranState extends State<glavni_ekran> {
     );
   }
 }
-
-
