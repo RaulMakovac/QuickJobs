@@ -29,15 +29,37 @@ class Oglas {
     final profileData = json['autor'];
     return Oglas(
       id: json['id'] ?? '',
-      naslov: json['naslov'] ?? 'Bez naslova',
-      opis: json['opis'] ?? '',
-      isplata: json['isplata']?.toString() ?? '0',
-      adresa: json['adresa'] ?? '',
-      status: json['status'] ?? 'otvoren',
+      naslov: json['naslov_oglasa'] ?? 'Bez naslova',
+      opis: json['opis_oglasa'] ?? '',
+      isplata: json['isplata_oglasa']?.toString() ?? '0',
+      adresa: json['adresa_oglasa'] ?? '',
+      status: json['status_oglasa'] ?? 'otvoren',
       createdAt: DateTime.parse(json['created_at']),
       autorIme: profileData != null
           ? profileData['puno_ime']
           : 'Nepoznat autor',
+    );
+  }
+}
+class Prijava {
+  final String id;
+  final String oglasId;
+  final Oglas oglas;
+  final DateTime createdAt;
+
+  Prijava({
+    required this.id,
+    required this.oglasId,
+    required this.oglas,
+    required this.createdAt,
+  });
+
+  factory Prijava.fromJson(Map<String, dynamic> json) {
+    return Prijava(
+      id: json['id'],
+      oglasId: json['oglas_id'],
+      oglas: Oglas.fromJson(json['oglasi']), // 'oglasi' jer radimo join u selectu
+      createdAt: DateTime.parse(json['created_at']),
     );
   }
 }
@@ -58,20 +80,31 @@ class _glavni_ekranState extends State<glavni_ekran> {
   static const darkBrown = Color(0xFF4A2C29);
   static const footerColor = Color(0xFF8F6E68);
 
-  Future<List<Oglas>> dohvatiOglase() async {
-    try {
-      final response = await supabase
-          .from('oglasi')
-          .select('*, autor:profiles!oglasi_autor_id_fkey(puno_ime)')
-          .order('created_at', ascending: false);
+  
+Future<List<Oglas>> dohvatiOglase() async {
+  try {
+    final user = supabase.auth.currentUser;
 
-      final List data = response as List;
-      return data.map((json) => Oglas.fromJson(json)).toList();
-    } catch (e) {
-      print("DEBUG GREŠKA: $e");
-      return [];
+    // 1. Započinjemo upit (bez await na početku!)
+    var query = supabase
+        .from('oglasi')
+        .select('*, autor:profiles!oglasi_autor_id_fkey(puno_ime)');
+
+    // 2. Ako je korisnik prijavljen, dodajemo filter "pokaži sve OSIM mojih"
+    if (user != null) {
+      query = query.neq('autor_id', user.id);
     }
+
+    // 3. Dodajemo sortiranje i tek sada stavljamo 'await' da izvršimo upit
+    final response = await query.order('created_at', ascending: false);
+
+    final List data = response as List;
+    return data.map((json) => Oglas.fromJson(json)).toList();
+  } catch (e) {
+    debugPrint("DEBUG GREŠKA: $e");
+    return [];
   }
+}
 
   @override
   Widget build(BuildContext context) {

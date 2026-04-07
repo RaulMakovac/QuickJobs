@@ -28,7 +28,7 @@ class Recenzija {
     return Recenzija(
       id: json['id'],
       ocjenjivacIme: ocjenjivacData != null ? ocjenjivacData['puno_ime'] : 'Korisnik',
-      oglasNaslov: oglasData != null ? oglasData['naslov'] : 'Posao',
+      oglasNaslov: oglasData != null ? oglasData['naslov_oglasa'] : 'Posao',
       ocjena: json['ocjena'],
       komentar: json['komentar'],
       uloga: json['uloga_ocijenjenog'],
@@ -100,7 +100,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
       final recenzijeRes = await supabase.from('recenzije').select('''
         *,
         ocjenjivac:profiles!recenzije_ocjenjivac_id_fkey(puno_ime),
-        oglasi!recenzije_oglas_id_fkey(naslov)
+        oglasi!recenzije_oglas_id_fkey(naslov_oglasa)
       ''').eq('ocijenjeni_id', user.id).order('created_at', ascending: false);
 
       setState(() {

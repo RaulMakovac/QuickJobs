@@ -45,11 +45,11 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
     try {
       await supabase.from('oglasi').insert({
         'autor_id': user!.id,
-        'naslov': naslov,
-        'adresa': adresa,
-        'isplata': isplata,
-        'opis': opis,
-        'status': 'otvoren',
+        'naslov_oglasa': naslov,
+        'adresa_oglasa': adresa,
+        'isplata_oglasa': isplata,
+        'opis_oglasa': opis,
+        'status_oglasa': 'otvoren',
       });
 
       if (mounted) {

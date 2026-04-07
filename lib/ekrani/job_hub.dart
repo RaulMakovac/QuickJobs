@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'moji_oglasi.dart'; 
+import 'moje_prijave.dart';
 
 class MojiPosloviHub extends StatelessWidget {
   const MojiPosloviHub({super.key});
@@ -39,9 +40,7 @@ class MojiPosloviHub extends StatelessWidget {
               title: "Moje prijave",
               subtitle: "Pogledaj status poslova na koje si se prijavio",
               icon: Icons.assignment_turned_in,
-              onTap: () {
-                // Ovdje će ići ekran za prijave u budućnosti
-              },
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MojePrijaveEkran())),
             ),
           ],
         ),

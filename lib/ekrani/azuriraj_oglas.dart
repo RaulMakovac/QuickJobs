@@ -31,10 +31,10 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
   Future<void> _updateOglas() async {
     try {
       await supabase.from('oglasi').update({
-        'naslov': _naslovController.text,
-        'opis': _opisController.text,
-        'isplata': _isplataController.text,
-        'adresa': _adresaController.text,
+        'naslov_oglasa': _naslovController.text,
+        'opis_oglasa': _opisController.text,
+        'isplata_oglasa': _isplataController.text,
+        'adresa_oglasa': _adresaController.text,
       }).eq('id', widget.oglas.id);
 
       if (mounted) {

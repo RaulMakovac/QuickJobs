@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '/ekrani/glavni_ekran.dart'; // Provjeri putanju do tvog modela Oglas
+import '/ekrani/glavni_ekran.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DetaljiOglasa extends StatelessWidget {
   final Oglas oglas;
@@ -14,7 +15,8 @@ class DetaljiOglasa extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
-      body: Stack( // Koristimo Stack za krugove u pozadini
+      body: Stack(
+        // Koristimo Stack za krugove u pozadini
         children: [
           // Pozadinski krugovi (vizualni detalj s tvog screenshota)
           Positioned(
@@ -22,7 +24,7 @@ class DetaljiOglasa extends StatelessWidget {
             left: -30,
             child: CircleAvatar(radius: 100, backgroundColor: Colors.white24),
           ),
-          
+
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(25.0),
@@ -39,7 +41,10 @@ class DetaljiOglasa extends StatelessWidget {
                         child: Text(
                           'Opis oglasa',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 40),
@@ -49,14 +54,21 @@ class DetaljiOglasa extends StatelessWidget {
 
                   // Naslov posla u tamnom mjehuriću
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 40,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: darkBrown,
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Text(
                       oglas.naslov,
-                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -68,16 +80,22 @@ class DetaljiOglasa extends StatelessWidget {
                       _buildSquareImage(),
                       const SizedBox(width: 15),
                       Column(
-                        
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.account_circle, size: 35, color: darkBrown),
+                              const Icon(
+                                Icons.account_circle,
+                                size: 35,
+                                color: darkBrown,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 oglas.autorIme ?? 'Nepoznat',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),
@@ -86,7 +104,10 @@ class DetaljiOglasa extends StatelessWidget {
                             padding: EdgeInsets.only(left: 43),
                             child: Text(
                               'Ocjena: Nema ocjena', // Ovdje će ići logika za zvjezdice kasnije
-                              style: TextStyle(color: Colors.black54, fontSize: 13),
+                              style: TextStyle(
+                                color: Colors.black54,
+                                fontSize: 13,
+                              ),
                             ),
                           ),
                         ],
@@ -111,7 +132,11 @@ class DetaljiOglasa extends StatelessWidget {
                     ),
                     child: Text(
                       oglas.opis.isEmpty ? 'Nema opisa.' : oglas.opis,
-                      style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.4),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 50),
@@ -119,12 +144,57 @@ class DetaljiOglasa extends StatelessWidget {
                   // Gumb za prijavu (Kvačica)
                   Column(
                     children: [
+                      // Unutar tvoje build metode, zamijeni GestureDetector dio ovime:
                       GestureDetector(
-                        onTap: () {
-                          // Ovdje će ići logika za prijavu
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Prijava poslana!')),
-                          );
+                        onTap: () async {
+                          final supabase = Supabase.instance.client;
+                          final user = supabase.auth.currentUser;
+
+                          if (user == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Morate biti prijavljeni!'),
+                              ),
+                            );
+                            return;
+                          }
+
+                          try {
+                            await supabase.from('prijave').insert({
+                              'oglas_id': oglas.id,
+                              'korisnik_id': user.id,
+                            });
+
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Uspješno prijavljeni!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                              Navigator.pop(context);
+                            }
+                          } on PostgrestException catch (e) {
+                            // Ovdje smo definirali 'e'
+                            if (context.mounted) {
+                              // Sada koristimo 'e.message' jer je gore 'catch (e)'
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Baza javlja: ${e.message}'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            // Općenita greška
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Neočekivana greška: $e'),
+                                ),
+                              );
+                            }
+                          }
                         },
                         child: Container(
                           width: 90,
@@ -132,15 +202,28 @@ class DetaljiOglasa extends StatelessWidget {
                           decoration: const BoxDecoration(
                             color: cardColor,
                             shape: BoxShape.circle,
-                            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5))],
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black26,
+                                blurRadius: 10,
+                                offset: Offset(0, 5),
+                              ),
+                            ],
                           ),
-                          child: const Icon(Icons.check, size: 55, color: Colors.black),
+                          child: const Icon(
+                            Icons.check,
+                            size: 55,
+                            color: Colors.black,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),
                       const Text(
                         'Prijavi se na posao!',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ],
                   ),
@@ -176,7 +259,10 @@ class DetaljiOglasa extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }

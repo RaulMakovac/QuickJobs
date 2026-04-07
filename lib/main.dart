@@ -10,6 +10,7 @@ import 'ekrani/objava_oglasa.dart';
 import 'ekrani/job_hub.dart';
 import 'ekrani/moji_oglasi.dart';
 import 'ekrani/korisnicki_profil.dart';
+import 'ekrani/moje_prijave.dart';
 
 
 void main() async {
@@ -37,7 +38,8 @@ class MyApp extends StatelessWidget {
       title: 'QuickJobs',
       debugShowCheckedModeBanner: false, // Miče debug watermark
 
-     initialRoute: '/ekrani/glavni_ekran',
+     //initialRoute: '/ekrani/glavni_ekran',
+     initialRoute: '/',
 
     // rute
     routes: {
@@ -50,6 +52,7 @@ class MyApp extends StatelessWidget {
       '/ekrani/job_hub': (context) => const MojiPosloviHub(),
       '/ekrani/moji_oglasi': (context) => const MojiOglasi(),
       '/ekrani/korisnicki_profil': (context) => const KorisnickiProfil(),
+      '/ekrani/moje_prijave': (context) => const MojePrijaveEkran(),
 
     },
   );

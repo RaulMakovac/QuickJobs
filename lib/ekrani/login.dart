@@ -44,7 +44,7 @@ class _LoginState extends State<login> {
       if (mounted) {
         // Nakon uspješnog logina, šaljemo korisnika na Home (odabir)
         // pushReplacementNamed briše login iz povijesti tako da se ne može vratiti "nazad" na login
-        Navigator.pushReplacementNamed(context, '/ekrani/home');
+        Navigator.pushReplacementNamed(context, '/ekrani/glavni_ekran');
       }
     } on AuthException catch (error) {
       if (mounted) {
