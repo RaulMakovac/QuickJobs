@@ -2,6 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/ekrani/glavni_ekran.dart';
 
+
+class Prijava {
+  final String id;
+  final String oglasId;
+  final Oglas oglas;
+  final DateTime createdAt;
+
+  Prijava({
+    required this.id,
+    required this.oglasId,
+    required this.oglas,
+    required this.createdAt,
+  });
+
+  factory Prijava.fromJson(Map<String, dynamic> json) {
+    return Prijava(
+      id: json['id'],
+      oglasId: json['oglas_id'],
+      oglas: Oglas.fromJson(json['oglasi']), // 'oglasi' jer radimo join u selectu
+      createdAt: DateTime.parse(json['created_at']),
+    );
+  }
+}
 class MojePrijaveEkran extends StatefulWidget {
   const MojePrijaveEkran({super.key});
 
