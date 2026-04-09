@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:quickjobs/ekrani/oglas.dart';
 import 'korisnicki_profil.dart';
 
+
 class Oglas {
   final String id;
   final String naslov;
@@ -12,6 +13,8 @@ class Oglas {
   final String adresa;
   final String status;
   final String? autorIme;
+  final String? autorId;    // <--- DODAJ OVO
+  final String? obavljacId; 
   final DateTime createdAt;
 
   Oglas({
@@ -22,24 +25,34 @@ class Oglas {
     required this.adresa,
     required this.status,
     this.autorIme,
+    this.autorId,           // <--- DODAJ OVO
+    this.obavljacId, 
     required this.createdAt,
   });
 
   factory Oglas.fromJson(Map<String, dynamic> json) {
-    final profileData = json['autor'];
-    return Oglas(
-      id: json['id'] ?? '',
-      naslov: json['naslov_oglasa'] ?? 'Bez naslova',
-      opis: json['opis_oglasa'] ?? '',
-      isplata: json['isplata_oglasa']?.toString() ?? '0',
-      adresa: json['adresa_oglasa'] ?? '',
-      status: json['status_oglasa'] ?? 'otvoren',
-      createdAt: DateTime.parse(json['created_at']),
-      autorIme: profileData != null
-          ? profileData['puno_ime']
-          : 'Nepoznat autor',
-    );
-  }
+  // Ovo hvatamo iz join-a: .select('*, autor:profiles(...)')
+  final profileData = json['autor'] as Map<String, dynamic>?;
+
+  return Oglas(
+    id: json['id'] ?? '',
+    naslov: json['naslov_oglasa'] ?? 'Bez naslova',
+    opis: json['opis_oglasa'] ?? '',
+    isplata: json['isplata_oglasa']?.toString() ?? '0',
+    adresa: json['adresa_oglasa'] ?? '',
+    status: json['status_oglasa'] ?? 'otvoren',
+    obavljacId: json['obavljac_id'],
+    createdAt: json['created_at'] != null 
+        ? DateTime.parse(json['created_at']) 
+        : DateTime.now(),
+    
+    // KLJUČNI DIO:
+    // Ako profil postoji, uzmi ID iz njega. Ako ne (kao u tvom glavnom ekranu),
+    // uzmi autor_id koji je stupac u tablici 'oglasi'.
+    autorId: profileData != null ? profileData['id'] : json['autor_id'], 
+    autorIme: profileData != null ? profileData['puno_ime'] : 'Nepoznat autor',
+  );
+}
 }
 class Prijava {
   final String id;
@@ -85,17 +98,19 @@ Future<List<Oglas>> dohvatiOglase() async {
   try {
     final user = supabase.auth.currentUser;
 
-    // 1. Započinjemo upit (bez await na početku!)
+    // 1. Započinjemo upit
     var query = supabase
         .from('oglasi')
-        .select('*, autor:profiles!oglasi_autor_id_fkey(puno_ime)');
+        .select('*, autor:profiles!oglasi_autor_id_fkey(puno_ime)')
+        .eq('status_oglasa', 'otvoren') // FILTER 1: Samo otvoreni oglasi
+        .filter('obavljac_id', 'is', null); // FILTER 2: Samo oni bez radnika
 
-    // 2. Ako je korisnik prijavljen, dodajemo filter "pokaži sve OSIM mojih"
+    // 2. Ako je korisnik prijavljen, makni njegove oglase (da ne vidi sam sebe)
     if (user != null) {
       query = query.neq('autor_id', user.id);
     }
 
-    // 3. Dodajemo sortiranje i tek sada stavljamo 'await' da izvršimo upit
+    // 3. Sortiraj po najnovijima
     final response = await query.order('created_at', ascending: false);
 
     final List data = response as List;

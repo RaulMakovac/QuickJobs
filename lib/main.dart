@@ -13,6 +13,7 @@ import 'ekrani/korisnicki_profil.dart';
 import 'ekrani/moje_prijave.dart';
 
 
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -53,6 +54,7 @@ class MyApp extends StatelessWidget {
       '/ekrani/moji_oglasi': (context) => const MojiOglasi(),
       '/ekrani/korisnicki_profil': (context) => const KorisnickiProfil(),
       '/ekrani/moje_prijave': (context) => const MojePrijaveEkran(),
+      
 
     },
   );

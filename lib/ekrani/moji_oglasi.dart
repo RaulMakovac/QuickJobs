@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:quickjobs/ekrani/azuriraj_oglas.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '/ekrani/glavni_ekran.dart'; 
+import '/ekrani/glavni_ekran.dart';
+import 'zaposli.dart';
 
 class MojiOglasi extends StatefulWidget {
   const MojiOglasi({super.key});
@@ -13,67 +14,168 @@ class MojiOglasi extends StatefulWidget {
 class _MojiOglasiState extends State<MojiOglasi> {
   final supabase = Supabase.instance.client;
 
-  // --- LOGIKA: DOHVAĆANJE ---
+  // --- LOGIKA: DOHVAĆANJE MOJIH OGLASA ---
   Future<List<Oglas>> dohvatiMojeOglase() async {
     final user = supabase.auth.currentUser;
-    final response = await supabase
-        .from('oglasi')
-        .select('*, autor:profiles!oglasi_autor_id_fkey(puno_ime)')
-        .eq('autor_id', user!.id) 
-        .order('created_at', ascending: false);
+    if (user == null) return [];
 
-    final List data = response as List;
-    return data.map((json) => Oglas.fromJson(json)).toList();
+    try {
+      final response = await supabase
+          .from('oglasi')
+          .select('*, autor:profiles!oglasi_autor_id_fkey(puno_ime), obavljac:profiles!oglasi_obavljac_id_fkey(puno_ime)')
+          .eq('autor_id', user.id)
+          .order('created_at', ascending: false);
+
+      final List data = response as List;
+      return data.map((json) => Oglas.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint("Greška pri dohvaćanju: $e");
+      return [];
+    }
+  }
+
+  // --- LOGIKA: DIJALOG ZA OCJENJIVANJE ---
+  void _pokaziDijalogZaOcjenu(Oglas oglas) {
+    int odabranaOcjena = 5;
+    final komentarController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text("Završi i ocijeni", textAlign: TextAlign.center),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Ocijenite radnika za obavljeni posao:"),
+              const SizedBox(height: 15),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  return IconButton(
+                    icon: Icon(
+                      index < odabranaOcjena ? Icons.star : Icons.star_border,
+                      color: Colors.orange,
+                      size: 32,
+                    ),
+                    onPressed: () => setDialogState(() => odabranaOcjena = index + 1),
+                  );
+                }),
+              ),
+              const SizedBox(height: 15),
+              TextField(
+                controller: komentarController,
+                decoration: InputDecoration(
+                  hintText: "Komentar (opcionalno)",
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Odustani")),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8F6E68)),
+              onPressed: () {
+                Navigator.pop(context);
+                _spremiRecenzijuIZavrsi(
+                  oglas: oglas,
+                  ocjena: odabranaOcjena,
+                  komentar: komentarController.text,
+                );
+              },
+              child: const Text("Spremi i završi", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- LOGIKA: SPREMANJE RECENZIJE I UPDATE OGLASA ---
+  Future<void> _spremiRecenzijuIZavrsi({
+    required Oglas oglas,
+    required int ocjena,
+    String? komentar,
+  }) async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null || oglas.obavljacId == null) return;
+
+      // 1. Ubacivanje u tablicu recenzije (prema tvojoj shemi)
+      await supabase.from('recenzije').insert({
+        'oglas_id': oglas.id,
+        'ocjenjivac_id': user.id,
+        'ocijenjeni_id': oglas.obavljacId,
+        'uloga_ocijenjenog': 'obavljač',
+        'ocjena': ocjena,
+        'komentar': komentar,
+      });
+
+      // 2. Promjena statusa oglasa
+      await supabase.from('oglasi').update({
+        'status_oglasa': 'obavljen',
+      }).eq('id', oglas.id);
+
+      if (mounted) {
+        setState(() {}); // Osvježava UI
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(backgroundColor: Colors.green, content: Text("Posao završen i radnik ocijenjen!")),
+        );
+      }
+    } catch (e) {
+      debugPrint("Greška: $e");
+    }
   }
 
   // --- LOGIKA: BRISANJE ---
   Future<void> _obrisiOglas(String id) async {
     try {
       await supabase.from('oglasi').delete().eq('id', id);
-      setState(() {}); // Osvježava listu nakon brisanja
+      setState(() {});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Oglas uspješno obrisan.')),
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Greška pri brisanju: $e')),
-        );
-      }
-    }
-  }
-
-  // --- LOGIKA: UPDATE (STATUS) ---
-  Future<void> _promijeniStatus(String id, String noviStatus) async {
-    try {
-      await supabase.from('oglasi').update({'status': noviStatus}).eq('id', id);
-      setState(() {});
-      if (mounted) Navigator.pop(context); // Zatvara BottomSheet
-    } catch (e) {
-      print("Greška pri ažuriranju: $e");
+      debugPrint("Greška: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    const bgColor = Color(0xFFE5D9D6);
+    const darkBrown = Color(0xFF4A2C29);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFE5D9D6),
+      backgroundColor: bgColor,
       body: Stack(
         children: [
-          Positioned(top: -50, left: -30, child: CircleAvatar(radius: 100, backgroundColor: Colors.white12)),
-          Positioned(bottom: -50, right: -30, child: CircleAvatar(radius: 120, backgroundColor: Colors.white12)),
-
+          Positioned(
+            top: -50,
+            left: -30,
+            child: CircleAvatar(radius: 100, backgroundColor: Colors.white.withOpacity(0.1)),
+          ),
+          Positioned(
+            bottom: -50,
+            right: -30,
+            child: CircleAvatar(radius: 120, backgroundColor: Colors.white.withOpacity(0.1)),
+          ),
           SafeArea(
             child: Column(
               children: [
                 _buildHeader(),
-                const SizedBox(height: 10),
-                const Text(
-                  "Ovdje možete vidjeti popis poslova koje ste objavili",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: Colors.black87),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    "Upravljajte svojim oglasima, zapošljavajte radnike i završavajte poslove na jednom mjestu.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.black54),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Expanded(
@@ -81,7 +183,7 @@ class _MojiOglasiState extends State<MojiOglasi> {
                     future: dohvatiMojeOglase(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator(color: Color(0xFF4A2C29)));
+                        return const Center(child: CircularProgressIndicator(color: darkBrown));
                       }
                       if (!snapshot.hasData || snapshot.data!.isEmpty) {
                         return const Center(child: Text("Niste objavili nijedan oglas."));
@@ -110,9 +212,16 @@ class _MojiOglasiState extends State<MojiOglasi> {
       padding: const EdgeInsets.all(20),
       child: Row(
         children: [
-          IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back, size: 30)),
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_ios_new, size: 25),
+          ),
           const Expanded(
-            child: Text("Moji oglasi", textAlign: TextAlign.center, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+            child: Text(
+              "Moji oglasi",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF4A2C29)),
+            ),
           ),
           const SizedBox(width: 40),
         ],
@@ -121,23 +230,33 @@ class _MojiOglasiState extends State<MojiOglasi> {
   }
 
   Widget _buildMojOglasCard(Oglas oglas) {
+    bool imaRadnika = oglas.obavljacId != null;
+    bool jeZavrsen = oglas.status == 'obavljen';
+    bool mozeSeMijenjati = !imaRadnika && !jeZavrsen;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(15),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF8F6E68), 
-        borderRadius: BorderRadius.circular(20),
+        color: jeZavrsen ? Colors.grey[400] : const Color(0xFF8F6E68),
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
       ),
       child: Column(
         children: [
-          Row( 
+          Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(15),
-                child: Container(
-                  width: 80, height: 80,
-                  color: Colors.green[200],
-                  child: const Icon(Icons.image, color: Colors.white, size: 40),
+              Container(
+                width: 65, height: 65,
+                decoration: BoxDecoration(
+                  color: jeZavrsen ? Colors.black26 : (imaRadnika ? Colors.orange[300] : Colors.white24),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Icon(
+                  jeZavrsen ? Icons.done_all : (imaRadnika ? Icons.engineering : Icons.person_search),
+                  color: Colors.white, size: 30,
                 ),
               ),
               const SizedBox(width: 15),
@@ -145,64 +264,65 @@ class _MojiOglasiState extends State<MojiOglasi> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(oglas.naslov, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 4),
                     Text(
-                      oglas.naslov, 
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      "Status: ${oglas.status}", 
-                      style: const TextStyle(color: Colors.white70, fontSize: 14)
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      "Isplata: ${oglas.isplata}€", 
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)
+                      jeZavrsen ? "Status: Završeno" : (imaRadnika ? "U tijeku: Radnik odabran" : "Tražim radnika..."),
+                      style: TextStyle(color: jeZavrsen ? Colors.black45 : Colors.white70, fontSize: 13),
                     ),
                   ],
                 ),
               ),
+              Text("${oglas.isplata}€", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
             ],
           ),
-          const Divider(color: Colors.white24, height: 20),
-          
-          // --- AKCIJE: STATUS, UREDI I OBRIŠI ---
+          const Divider(color: Colors.white24, height: 25, thickness: 1),
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // 1. Gumb za brzu promjenu STATUSA (otvara BottomSheet)
-              TextButton.icon(
-                onPressed: () => _pokaziOpcijeUredivanja(oglas),
-                icon: const Icon(Icons.sync, color: Colors.white, size: 18),
-                label: const Text("Status", style: TextStyle(color: Colors.white)),
-              ),
-              
-              const SizedBox(width: 5),
-
-              // 2. Gumb za EDIT specifikacija (vodi na novi ekran)
-              TextButton.icon(
-                onPressed: () async {
-                  final osvjezi = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AzurirajOglas(oglas: oglas),
+              if (mozeSeMijenjati) 
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => _potvrdiBrisanje(oglas),
+                      icon: const Icon(Icons.delete_sweep_outlined, color: Color(0xFFFFB7B7)),
                     ),
-                  );
-                  // Ako se vrati 'true' iz UrediOglasEkran, osvježi listu
-                  if (osvjezi == true) {
-                    setState(() {});
+                    IconButton(
+                      onPressed: () async {
+                        final osvjezi = await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => AzurirajOglas(oglas: oglas)),
+                        );
+                        if (osvjezi == true) setState(() {});
+                      },
+                      icon: const Icon(Icons.edit_note, color: Colors.white),
+                    ),
+                  ],
+                ) 
+              else 
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Text(
+                    jeZavrsen ? "Arhivirano" : "Posao u tijeku",
+                    style: const TextStyle(color: Colors.black38, fontWeight: FontWeight.bold),
+                  ),
+                ),
+
+              if (!jeZavrsen) ElevatedButton(
+                onPressed: () {
+                  if (imaRadnika) {
+                    _pokaziDijalogZaOcjenu(oglas); // Pozivamo ocjenjivanje
+                  } else {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => Zaposli(oglas: oglas)));
                   }
                 },
-                icon: const Icon(Icons.edit, color: Colors.white, size: 18),
-                label: const Text("Uredi", style: TextStyle(color: Colors.white)),
-              ),
-
-              const SizedBox(width: 5),
-
-              // 3. Gumb za BRISANJE
-              IconButton(
-                onPressed: () => _potvrdiBrisanje(oglas),
-                icon: const Icon(Icons.delete_outline, color: Color(0xFFFFB7B7)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: imaRadnika ? Colors.orange[400] : Colors.white,
+                  foregroundColor: imaRadnika ? Colors.white : const Color(0xFF4A2C29),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+                child: Text(imaRadnika ? "ZAVRŠI POSAO" : "VIDI PRIJAVE", style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -211,58 +331,24 @@ class _MojiOglasiState extends State<MojiOglasi> {
     );
   }
 
-  // --- DIJALOG ZA POTVRDU BRISANJA ---
   void _potvrdiBrisanje(Oglas oglas) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text("Brisanje oglasa"),
-        content: Text("Jeste li sigurni da želite trajno obrisati oglas '${oglas.naslov}'?"),
+        content: Text("Želite li trajno ukloniti oglas '${oglas.naslov}'?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Odustani")),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _obrisiOglas(oglas.id);
-            }, 
+            },
             child: const Text("Obriši", style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
-    );
-  }
-
-  // --- MODAL ZA PROMJENU STATUSA ---
-  void _pokaziOpcijeUredivanja(Oglas oglas) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFFE5D9D6),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text("Promijeni status oglasa", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 15),
-              _statusTile(oglas.id, "otvoren", Icons.lock_open, Colors.green),
-              _statusTile(oglas.id, "u tijeku", Icons.access_time, Colors.orange),
-              _statusTile(oglas.id, "obavljen", Icons.check_circle_outline, Colors.blue),
-              _statusTile(oglas.id, "neobavljen", Icons.cancel_outlined, Colors.red),
-              const SizedBox(height: 10),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _statusTile(String id, String status, IconData icon, Color color) {
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text("Označi kao '$status'"),
-      onTap: () => _promijeniStatus(id, status),
     );
   }
 }
