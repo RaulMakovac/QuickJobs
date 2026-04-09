@@ -27,7 +27,9 @@ class Recenzija {
     final oglasData = json['oglasi'];
     return Recenzija(
       id: json['id'],
-      ocjenjivacIme: ocjenjivacData != null ? ocjenjivacData['puno_ime'] : 'Korisnik',
+      ocjenjivacIme: ocjenjivacData != null
+          ? ocjenjivacData['puno_ime']
+          : 'Korisnik',
       oglasNaslov: oglasData != null ? oglasData['naslov_oglasa'] : 'Posao',
       ocjena: json['ocjena'],
       komentar: json['komentar'],
@@ -63,7 +65,8 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
   }
 
   // ID korisnika čije podatke stvarno dohvaćamo
-  String get ciljaniUserId => widget.prikazaniKorisnikId ?? supabase.auth.currentUser!.id;
+  String get ciljaniUserId =>
+      widget.prikazaniKorisnikId ?? supabase.auth.currentUser!.id;
 
   late TextEditingController _imeController;
   late TextEditingController _emailController;
@@ -96,104 +99,130 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
   }
 
   Future<void> _inicijalizirajPodatke() async {
+    try {
+      // 1. Profil - Koristimo ciljaniUserId (ID radnika kojeg smo proslijedili)
+      final profil = await supabase
+          .from('profiles')
+          .select()
+          .eq('id', ciljaniUserId)
+          .single();
 
+      // 2. Izdani oglasi tog korisnika
+      final oglasiRes = await supabase
+          .from('oglasi')
+          .select()
+          .eq('autor_id', ciljaniUserId) // I OVDJE
+          .limit(10);
 
-  try {
-    // 1. Profil - Koristimo ciljaniUserId (ID radnika kojeg smo proslijedili)
-    final profil = await supabase
-        .from('profiles')
-        .select()
-        .eq('id', ciljaniUserId) 
-        .single();
-    
-    // 2. Izdani oglasi tog korisnika
-    final oglasiRes = await supabase
-        .from('oglasi')
-        .select()
-        .eq('autor_id', ciljaniUserId) // I OVDJE
-        .limit(10);
-    
-    // 3. Recenzije (prema ciljanom korisniku)
-    final recenzijeRes = await supabase.from('recenzije').select('''
+      // 3. Recenzije (prema ciljanom korisniku)
+      final recenzijeRes = await supabase
+          .from('recenzije')
+          .select('''
       *,
       ocjenjivac:profiles!recenzije_ocjenjivac_id_fkey(puno_ime),
       oglasi!recenzije_oglas_id_fkey(naslov_oglasa)
-    ''').eq('ocijenjeni_id', ciljaniUserId).order('created_at', ascending: false);
+    ''')
+          .eq('ocijenjeni_id', ciljaniUserId)
+          .order('created_at', ascending: false);
 
-    if (mounted) {
-      setState(() {
-        _imeController.text = profil['puno_ime'] ?? "";
-        _emailController.text = profil['email_adresa'] ?? "";
-        _telefonController.text = profil['telefon'] ?? "";
-        _opisController.text = profil['opis_profila'] ?? "";
-        _prosjecnaOcjena = (profil['ocjena_korisnika'] ?? 0.0).toDouble();
-        
-        _mojiOglasi = (oglasiRes as List).map((json) => Oglas.fromJson(json)).toList();
-        _recenzije = (recenzijeRes as List).map((json) => Recenzija.fromJson(json)).toList();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _imeController.text = profil['puno_ime'] ?? "";
+          _emailController.text = profil['email_adresa'] ?? "";
+          _telefonController.text = profil['telefon'] ?? "";
+          _opisController.text = profil['opis_profila'] ?? "";
+
+          // SIGURNIJE DOCHVAĆANJE OCJENE
+          final rawOcjena = profil['ocjena_korisnika'];
+          if (rawOcjena != null) {
+            _prosjecnaOcjena = (rawOcjena as num).toDouble();
+          } else {
+            _prosjecnaOcjena = 0.0;
+          }
+
+          _mojiOglasi = (oglasiRes as List)
+              .map((json) => Oglas.fromJson(json))
+              .toList();
+          _recenzije = (recenzijeRes as List)
+              .map((json) => Recenzija.fromJson(json))
+              .toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Greška pri dohvaćanju: $e");
+      if (mounted) setState(() => _isLoading = false);
     }
-  } catch (e) {
-    debugPrint("Greška pri dohvaćanju: $e");
-    if (mounted) setState(() => _isLoading = false);
   }
-}
 
   Future<void> _spremiPromjene() async {
     try {
-      await supabase.from('profiles').update({
-        'puno_ime': _imeController.text,
-        'telefon': _telefonController.text,
-        'opis_profila': _opisController.text,
-      }).eq('id', ciljaniUserId);
+      await supabase
+          .from('profiles')
+          .update({
+            'puno_ime': _imeController.text,
+            'telefon': _telefonController.text,
+            'opis_profila': _opisController.text,
+          })
+          .eq('id', ciljaniUserId);
 
       setState(() => _isEditing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Profil je uspješno ažuriran!")),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Greška: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Greška: $e")));
     }
   }
 
-void _odjava() async {
-  // Prvo prikazujemo dijalog za potvrdu
-  bool? potvrda = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: bgColor, // Koristimo tvoju boju pozadine
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text(
-        "Odjava", 
-        style: TextStyle(color: darkBrown, fontWeight: FontWeight.bold)
-      ),
-      content: const Text("Jeste li sigurni da se želite odjaviti iz aplikacije?"),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false), // Vraća 'false'
-          child: const Text("Odustani", style: TextStyle(color: Colors.grey)),
+  void _odjava() async {
+    // Prvo prikazujemo dijalog za potvrdu
+    bool? potvrda = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: bgColor, // Koristimo tvoju boju pozadine
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          "Odjava",
+          style: TextStyle(color: darkBrown, fontWeight: FontWeight.bold),
         ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, true), // Vraća 'true'
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.redAccent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        content: const Text(
+          "Jeste li sigurni da se želite odjaviti iz aplikacije?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false), // Vraća 'false'
+            child: const Text("Odustani", style: TextStyle(color: Colors.grey)),
           ),
-          child: const Text("Odjavi se", style: TextStyle(color: Colors.white)),
-        ),
-      ],
-    ),
-  );
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true), // Vraća 'true'
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              "Odjavi se",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
 
-  // Ako je korisnik kliknuo "Odjavi se" (true), izvrši odjavu
-  if (potvrda == true) {
-    await supabase.auth.signOut();
-    if (mounted) {
-      // Šaljemo ga na početni ekran (login) i brišemo cijeli stack navigacije
-      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+    // Ako je korisnik kliknuo "Odjavi se" (true), izvrši odjavu
+    if (potvrda == true) {
+      await supabase.auth.signOut();
+      if (mounted) {
+        // Šaljemo ga na početni ekran (login) i brišemo cijeli stack navigacije
+        Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+      }
     }
   }
-}
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -217,17 +246,24 @@ void _odjava() async {
             if (_isEditing)
               IconButton(
                 onPressed: _spremiPromjene,
-                icon: const Icon(Icons.check_circle, color: Colors.green, size: 30),
+                icon: const Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                  size: 30,
+                ),
               ),
             IconButton(
               onPressed: () => setState(() => _isEditing = !_isEditing),
-              icon: Icon(_isEditing ? Icons.cancel : Icons.edit, color: darkBrown),
+              icon: Icon(
+                _isEditing ? Icons.cancel : Icons.edit,
+                color: darkBrown,
+              ),
             ),
             IconButton(
               onPressed: _odjava,
               icon: const Icon(Icons.logout, color: Colors.redAccent),
             ),
-          ]
+          ],
         ],
       ),
       body: SingleChildScrollView(
@@ -238,7 +274,11 @@ void _odjava() async {
             _buildUserHeader(),
             const SizedBox(height: 25),
             _buildEditableField("Ime i prezime:", _imeController),
-            _buildEditableField("E-mail adresa:", _emailController, enabled: false),
+            _buildEditableField(
+              "E-mail adresa:",
+              _emailController,
+              enabled: false,
+            ),
             _buildEditableField("Broj telefona:", _telefonController),
             _buildAboutMeField(),
             const SizedBox(height: 25),
@@ -264,20 +304,33 @@ void _odjava() async {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_imeController.text, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(
+              _imeController.text,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
             Row(
               children: [
-                Text("$_prosjecnaOcjena", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                Text(
+                  "$_prosjecnaOcjena",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
                 const Icon(Icons.star, color: Colors.amber, size: 20),
               ],
-            )
+            ),
           ],
-        )
+        ),
       ],
     );
   }
 
-  Widget _buildEditableField(String label, TextEditingController controller, {bool enabled = true}) {
+  Widget _buildEditableField(
+    String label,
+    TextEditingController controller, {
+    bool enabled = true,
+  }) {
     // Ako nije moj profil, ne prikazujemo ikonu za editiranje nikada
     bool mozeEditirati = jeLiMojProfil && _isEditing && enabled;
 
@@ -290,22 +343,40 @@ void _odjava() async {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
             decoration: const BoxDecoration(
               color: cardColor,
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8)),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
+              ),
             ),
-            child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.white, fontSize: 11),
+            ),
           ),
           TextField(
             controller: controller,
             enabled: mozeEditirati,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.black,
+            ),
             decoration: InputDecoration(
               filled: true,
               fillColor: inputBg,
               isDense: true,
               contentPadding: const EdgeInsets.all(12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-              disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-              suffixIcon: mozeEditirati ? const Icon(Icons.edit, size: 16, color: darkBrown) : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none,
+              ),
+              suffixIcon: mozeEditirati
+                  ? const Icon(Icons.edit, size: 16, color: darkBrown)
+                  : null,
             ),
           ),
         ],
@@ -319,8 +390,17 @@ void _odjava() async {
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-          decoration: const BoxDecoration(color: cardColor, borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8))),
-          child: const Text("Opis profila", style: TextStyle(color: Colors.white, fontSize: 11)),
+          decoration: const BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(8),
+              topRight: Radius.circular(8),
+            ),
+          ),
+          child: const Text(
+            "Opis profila",
+            style: TextStyle(color: Colors.white, fontSize: 11),
+          ),
         ),
         TextField(
           controller: _opisController,
@@ -330,8 +410,14 @@ void _odjava() async {
           decoration: InputDecoration(
             filled: true,
             fillColor: inputBg,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-            disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
           ),
         ),
       ],
@@ -343,13 +429,18 @@ void _odjava() async {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(jeLiMojProfil ? "Moji izdani poslovi" : "Izdani poslovi korisnika", 
-             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(
+          jeLiMojProfil ? "Moji izdani poslovi" : "Izdani poslovi korisnika",
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         const SizedBox(height: 10),
         Container(
           height: 120,
           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 5),
-          decoration: BoxDecoration(color: inputBg.withOpacity(0.5), borderRadius: BorderRadius.circular(15)),
+          decoration: BoxDecoration(
+            color: inputBg.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(15),
+          ),
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: _mojiOglasi.length,
@@ -361,12 +452,25 @@ void _odjava() async {
                 child: Column(
                   children: [
                     Container(
-                      height: 60, width: 60,
-                      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(12)),
-                      child: const Icon(Icons.work_outline, color: Colors.white),
+                      height: 60,
+                      width: 60,
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.work_outline,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 5),
-                    Text(oglas.naslov, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Text(
+                      oglas.naslov,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 10),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               );
@@ -381,10 +485,16 @@ void _odjava() async {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Recenzije", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const Text(
+          "Recenzije",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         const SizedBox(height: 10),
         if (_recenzije.isEmpty)
-          const Text("Nema dostupnih recenzija.", style: TextStyle(color: Colors.black45, fontSize: 13)),
+          const Text(
+            "Nema dostupnih recenzija.",
+            style: TextStyle(color: Colors.black45, fontSize: 13),
+          ),
         ..._recenzije.map((r) => _buildRecenzijaCard(r)).toList(),
       ],
     );
@@ -394,28 +504,53 @@ void _odjava() async {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15)),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(15),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(r.ocjenjivacIme, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              Text(
+                r.ocjenjivacIme,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               Row(
                 children: [
-                  Text("${r.ocjena}", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text(
+                    "${r.ocjena}",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const Icon(Icons.star, color: Colors.amber, size: 16),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 4),
-          Text("Za posao: ${r.oglasNaslov}", style: const TextStyle(color: Colors.white70, fontSize: 11, fontStyle: FontStyle.italic)),
+          Text(
+            "Za posao: ${r.oglasNaslov}",
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
           if (r.komentar != null && r.komentar!.isNotEmpty) ...[
             const Divider(color: Colors.white24),
-            Text(r.komentar!, style: const TextStyle(color: Colors.white, fontSize: 13)),
-          ]
+            Text(
+              r.komentar!,
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+            ),
+          ],
         ],
       ),
     );
