@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/ekrani/glavni_ekran.dart'; 
 import '/ekrani/korisnicki_profil.dart'; 
-
+//komentar
 class Zaposli extends StatefulWidget {
   final Oglas oglas;
   const Zaposli({super.key, required this.oglas});
