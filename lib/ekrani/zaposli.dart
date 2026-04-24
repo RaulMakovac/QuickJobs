@@ -33,35 +33,37 @@ class _ZaposliState extends State<Zaposli> {
   }
 
  // --- LOGIKA: PRIHVATI KANDIDATA ---
-  Future<void> _prihvatiKandidata(String kandidatId) async {
-    try {
-      // 1. Postavi radnika i promijeni status oglasa
-      await supabase.from('oglasi').update({
-        'obavljac_id': kandidatId,
-        'status_oglasa': 'u_tijeku', 
-      }).eq('id', widget.oglas.id);
+  // --- LOGIKA: PRIHVATI KANDIDATA ---
+Future<void> _prihvatiKandidata(String kandidatId) async {
+  try {
+    // 1. Postavi radnika i promijeni status oglasa
+    await supabase.from('oglasi').update({
+      'obavljac_id': kandidatId,
+      'status_oglasa': 'u_tijeku', 
+    }).eq('id', widget.oglas.id);
 
-      // 2. Obriši prijave svih OSTALIH korisnika, ali OSTAVI prihvaćenog
-      await supabase
-          .from('prijave')
-          .delete()
-          .eq('oglas_id', widget.oglas.id)
-          .neq('korisnik_id', kandidatId); // <--- KLJUČNA PROMJENA: "briši sve gdje ID NIJE kandidatId"
+    // 2. Obriši ostale prijave
+    await supabase
+        .from('prijave')
+        .delete()
+        .eq('oglas_id', widget.oglas.id)
+        .neq('korisnik_id', kandidatId);
 
-      if (mounted) {
-        Navigator.pop(context); // Zatvori modal
-        Navigator.pop(context); // Vrati se na prethodni ekran
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.green, 
-            content: Text("Radnik zaposlen! Njegova prijava je sačuvana.")
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint("Greška pri prihvaćanju: $e");
+    if (mounted) {
+      Navigator.pop(context); // Zatvara modal (BottomSheet ili Dialog ako ga imaš)
+      Navigator.pop(context, true); 
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.green, 
+          content: Text("Radnik zaposlen! Njegova prijava je sačuvana.")
+        ),
+      );
     }
+  } catch (e) {
+    debugPrint("Greška pri prihvaćanju: $e");
   }
+}
 
   // --- LOGIKA: ODBIJ KANDIDATA ---
   Future<void> _odbijKandidata(String kandidatId) async {

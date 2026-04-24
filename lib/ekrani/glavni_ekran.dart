@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:quickjobs/ekrani/oglas.dart'; // Provjeri je li ovo točan put do DetaljiOglasa
+import 'package:quickjobs/ekrani/oglas.dart'; 
 import 'korisnicki_profil.dart';
 
-// --- MODELI (Ostavljeni ovdje radi sigurnosti) ---
+// --- MODELI -- podaci za prikaz
 class Oglas {
   final String id;
   final String naslov;
@@ -29,7 +29,7 @@ class Oglas {
     this.obavljacId,
     required this.createdAt,
   });
-
+//definiranje podataka, izjednačavanje naziva u kodu i naziva u supabaseu
   factory Oglas.fromJson(Map<String, dynamic> json) {
     final profileData = json['autor'] as Map<String, dynamic>?;
     return Oglas(
@@ -59,7 +59,7 @@ class glavni_ekran extends StatefulWidget {
 class _glavni_ekranState extends State<glavni_ekran> {
   final supabase = Supabase.instance.client;
   
-  // Kontroleri i varijable filtera
+  // Kontroleri i varijable filtera koji omogućuju pretragu
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _lokacijaController = TextEditingController();
   String _searchQuery = "";
@@ -73,7 +73,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
   static const darkBrown = Color(0xFF4A2C29);
   static const footerColor = Color(0xFF8F6E68);
 
-  // Funkcija za dohvaćanje podataka iz Supabase-a
+  // Funkcija za dohvaćanje podataka iz supabasea
   Future<List<Oglas>> dohvatiOglase() async {
     try {
       final user = supabase.auth.currentUser;
@@ -99,7 +99,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
         query = query.neq('autor_id', user.id);
       }
 
-      final response = await query.order('created_at', ascending: false);
+      final response = await query.order('created_at', ascending: false); //kreira listu pretrage
       final List data = response as List;
       return data.map((json) => Oglas.fromJson(json)).toList();
     } catch (e) {
