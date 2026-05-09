@@ -183,20 +183,22 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
     );
   }
 
-  // 3. FUNKCIJA ZA OTKAZIVANJE PRIJE POČETKA POSLA
   Future<void> _otkaziPrijavu(String prijavaId) async {
-    try {
-      await supabase.from('prijave').delete().eq('id', prijavaId);
-      if (mounted) {
-        setState(() {});
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Prijava otkazana')),
-        );
-      }
-    } catch (e) {
-      debugPrint("Greška pri otkazivanju: $e");
+  try {
+    await supabase.from('prijave').delete().eq('id', prijavaId);
+    
+    if (mounted) {
+      // 1. Osvježavamo trenutni ekran (npr. listu tvojih prijava)
+      setState(() {}); 
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Prijava otkazana')),
+      );
     }
+  } catch (e) {
+    debugPrint("Greška pri otkazivanju: $e");
   }
+}
 
   @override
   Widget build(BuildContext context) {

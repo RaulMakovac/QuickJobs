@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '/ekrani/glavni_ekran.dart'; 
-import '/ekrani/korisnicki_profil.dart'; 
+import '/ekrani/glavni_ekran.dart';
+import '/ekrani/korisnicki_profil.dart';
+
 //komentar
 class Zaposli extends StatefulWidget {
   final Oglas oglas;
@@ -21,7 +22,9 @@ class _ZaposliState extends State<Zaposli> {
         .select('*, profiles(id, puno_ime, telefon, ocjena_korisnika)')
         .eq('oglas_id', widget.oglas.id);
 
-    List<Map<String, dynamic>> lista = List<Map<String, dynamic>>.from(response);
+    List<Map<String, dynamic>> lista = List<Map<String, dynamic>>.from(
+      response,
+    );
 
     lista.sort((a, b) {
       double ocjenaA = (a['profiles']['ocjena_korisnika'] ?? 0.0).toDouble();
@@ -32,53 +35,71 @@ class _ZaposliState extends State<Zaposli> {
     return lista;
   }
 
- // --- LOGIKA: PRIHVATI KANDIDATA ---
   // --- LOGIKA: PRIHVATI KANDIDATA ---
-Future<void> _prihvatiKandidata(String kandidatId) async {
-  try {
-    // 1. Postavi radnika i promijeni status oglasa
-    await supabase.from('oglasi').update({
-      'obavljac_id': kandidatId,
-      'status_oglasa': 'u_tijeku', 
-    }).eq('id', widget.oglas.id);
+  // --- LOGIKA: PRIHVATI KANDIDATA ---
+  Future<void> _prihvatiKandidata(String kandidatId) async {
+    try {
+      // 1. Postavi radnika i promijeni status oglasa
+      await supabase
+          .from('oglasi')
+          .update({'obavljac_id': kandidatId, 'status_oglasa': 'u_tijeku'})
+          .eq('id', widget.oglas.id);
 
-    // 2. Obriši ostale prijave
-    await supabase
-        .from('prijave')
-        .delete()
-        .eq('oglas_id', widget.oglas.id)
-        .neq('korisnik_id', kandidatId);
+      // 2. Obriši ostale prijave
+      await supabase
+          .from('prijave')
+          .delete()
+          .eq('oglas_id', widget.oglas.id)
+          .neq('korisnik_id', kandidatId);
 
-    if (mounted) {
-      Navigator.pop(context); // Zatvara modal (BottomSheet ili Dialog ako ga imaš)
-      Navigator.pop(context, true); 
+      // Unutar funkcije _prihvatiKandidata
+      // 1. Postavi radnika i status (to već imaš)
+      await supabase
+          .from('oglasi')
+          .update({'obavljac_id': kandidatId, 'status_oglasa': 'u_tijeku'})
+          .eq('id', widget.oglas.id);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Colors.green, 
-          content: Text("Radnik zaposlen! Njegova prijava je sačuvana.")
-        ),
-      );
+      // 2. STVORI CHAT SOBU AUTOMATSKI
+      await supabase.from('chat_sobe').insert({
+        'oglas_id': widget.oglas.id,
+        'klijent_id': supabase.auth.currentUser!.id,
+        'radnik_id': kandidatId,
+      });
+
+      if (mounted) {
+        Navigator.pop(
+          context,
+        ); // Zatvara modal (BottomSheet ili Dialog ako ga imaš)
+        Navigator.pop(context, true);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.green,
+            content: Text("Radnik zaposlen! Njegova prijava je sačuvana."),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Greška pri prihvaćanju: $e");
     }
-  } catch (e) {
-    debugPrint("Greška pri prihvaćanju: $e");
   }
-}
 
   // --- LOGIKA: ODBIJ KANDIDATA ---
   Future<void> _odbijKandidata(String kandidatId) async {
     try {
       // Brišemo samo tu jednu prijavu (korisnik_id se obično zove stupac u 'prijave')
-      await supabase.from('prijave').delete()
+      await supabase
+          .from('prijave')
+          .delete()
           .eq('oglas_id', widget.oglas.id)
           .eq('korisnik_id', kandidatId);
 
       if (mounted) {
         Navigator.pop(context); // Zatvori modal
         setState(() {}); // Osvježi listu kandidata
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Kandidat odbijen.")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Kandidat odbijen.")));
       }
     } catch (e) {
       debugPrint("Greška pri odbijanju: $e");
@@ -101,9 +122,12 @@ Future<void> _prihvatiKandidata(String kandidatId) async {
         future: _dohvatiPrijavljeneKorisnike(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: darkBrown));
+            return const Center(
+              child: CircularProgressIndicator(color: darkBrown),
+            );
           }
-          if (snapshot.hasError) return Center(child: Text("Greška: ${snapshot.error}"));
+          if (snapshot.hasError)
+            return Center(child: Text("Greška: ${snapshot.error}"));
 
           final prijave = snapshot.data ?? [];
           final brojPrijava = prijave.length;
@@ -124,9 +148,21 @@ Future<void> _prihvatiKandidata(String kandidatId) async {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Ukupno prijava: $brojPrijava", style: const TextStyle(color: Colors.white70, fontSize: 16)),
+                        Text(
+                          "Ukupno prijava: $brojPrijava",
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 16,
+                          ),
+                        ),
                         const SizedBox(height: 5),
-                        const Text("Pregledajte kandidate ispod", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        const Text(
+                          "Pregledajte kandidate ispod",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                     const Icon(Icons.group, color: Colors.white, size: 40),
@@ -134,7 +170,10 @@ Future<void> _prihvatiKandidata(String kandidatId) async {
                 ),
               ),
 
-              const Text("LISTA KANDIDATA", style: TextStyle(fontWeight: FontWeight.bold, color: darkBrown)),
+              const Text(
+                "LISTA KANDIDATA",
+                style: TextStyle(fontWeight: FontWeight.bold, color: darkBrown),
+              ),
               const Divider(indent: 50, endIndent: 50),
 
               Expanded(
@@ -145,13 +184,32 @@ Future<void> _prihvatiKandidata(String kandidatId) async {
                         itemBuilder: (context, index) {
                           final profil = prijave[index]['profiles'];
                           return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(15),
+                            ),
                             child: ListTile(
-                              leading: const CircleAvatar(backgroundColor: Color(0xFFD1BDB9), child: Icon(Icons.person, color: darkBrown)),
-                              title: Text(profil['puno_ime'] ?? "Korisnik", style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text("Ocjena: ${profil['ocjena_korisnika'] ?? '0.0'} ★"),
-                              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF8F6E68)),
+                              leading: const CircleAvatar(
+                                backgroundColor: Color(0xFFD1BDB9),
+                                child: Icon(Icons.person, color: darkBrown),
+                              ),
+                              title: Text(
+                                profil['puno_ime'] ?? "Korisnik",
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                "Ocjena: ${profil['ocjena_korisnika'] ?? '0.0'} ★",
+                              ),
+                              trailing: const Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                                color: Color(0xFF8F6E68),
+                              ),
                               onTap: () => _prikaziDetaljeKandidata(profil),
                             ),
                           );
@@ -172,31 +230,58 @@ Future<void> _prihvatiKandidata(String kandidatId) async {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFFE5D9D6),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
       builder: (context) => Padding(
         padding: const EdgeInsets.all(30),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.account_circle, size: 60, color: Color(0xFF4A2C29)),
+            const Icon(
+              Icons.account_circle,
+              size: 60,
+              color: Color(0xFF4A2C29),
+            ),
             const SizedBox(height: 10),
-            Text(profil['puno_ime'] ?? "Korisnik", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF4A2C29))),
-            Text(imaOcjenu ? "Ocjena: $ocjena/5 ★" : "Nema recenzija", style: const TextStyle(color: Colors.black54)),
-            
+            Text(
+              profil['puno_ime'] ?? "Korisnik",
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF4A2C29),
+              ),
+            ),
+            Text(
+              imaOcjenu ? "Ocjena: $ocjena/5 ★" : "Nema recenzija",
+              style: const TextStyle(color: Colors.black54),
+            ),
+
             const SizedBox(height: 25),
 
             // TIPKA: UVID U PROFIL
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (context) => KorisnickiProfil(prikazaniKorisnikId: profil['id'])));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        KorisnickiProfil(prikazaniKorisnikId: profil['id']),
+                  ),
+                );
               },
               icon: const Icon(Icons.person_search, color: Colors.white),
-              label: const Text("UVID U PROFIL PRIJAVLJENOG", style: TextStyle(color: Colors.white)),
+              label: const Text(
+                "UVID U PROFIL PRIJAVLJENOG",
+                style: TextStyle(color: Colors.white),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF8F6E68),
                 minimumSize: const Size(double.infinity, 45),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
 
@@ -210,9 +295,14 @@ Future<void> _prihvatiKandidata(String kandidatId) async {
                     onPressed: () => _odbijKandidata(profil['id']),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Colors.red),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                    child: const Text("ODBIJ", style: TextStyle(color: Colors.red)),
+                    child: const Text(
+                      "ODBIJ",
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -221,23 +311,31 @@ Future<void> _prihvatiKandidata(String kandidatId) async {
                     onPressed: () => _prihvatiKandidata(profil['id']),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                    child: const Text("PRIHVATI", style: TextStyle(color: Colors.white)),
+                    child: const Text(
+                      "PRIHVATI",
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
               ],
             ),
-            
+
             const Divider(height: 40),
-            
+
             // KONTAKT
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.phone, size: 20, color: Color(0xFF4A2C29)),
                 const SizedBox(width: 10),
-                Text(profil['telefon'] ?? "Nema broja", style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  profil['telefon'] ?? "Nema broja",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ],
             ),
           ],

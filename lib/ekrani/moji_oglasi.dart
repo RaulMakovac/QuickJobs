@@ -376,6 +376,7 @@ class _MojiOglasiState extends State<MojiOglasi> {
                     style: const TextStyle(
                       color: Colors.black38,
                       fontWeight: FontWeight.bold,
+                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -394,7 +395,6 @@ class _MojiOglasiState extends State<MojiOglasi> {
                           builder: (context) => Zaposli(oglas: oglas),
                         ),
                       );
-
                       // Ako se vratiš s ekrana Zaposli i rezultat je true, osvježi listu
                       if (osvjezi == true && mounted) {
                         setState(() {});
@@ -417,6 +417,20 @@ class _MojiOglasiState extends State<MojiOglasi> {
                     imaRadnika ? "ZAVRŠI POSAO" : "VIDI PRIJAVE",
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
+                ),
+                
+              if (imaRadnika && !jeZavrsen)
+                IconButton(
+                  icon: const Icon(
+                    Icons.chat_bubble_outline,
+                    color: Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/ekrani/chat_hub');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Otvaram chat...")),
+                    );
+                  },
                 ),
             ],
           ),
