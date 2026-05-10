@@ -87,7 +87,7 @@ class odabir extends StatelessWidget {
                         svgPath: 'assets/images/trazim_posao.svg',
                         onTap: () {
                           // Također vodi na isti ekran (ili neki drugi ako želiš)
-                          Navigator.pushNamed(context, '/ekrani/glavni_ekran');
+                          Navigator.pushNamed(context, '/ekrani/jednostavni_ekran');
                         },
                       ),
                     ],

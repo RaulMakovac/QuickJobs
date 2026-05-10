@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/ekrani/glavni_ekran.dart';
-
+import '../dekor.dart';
+import 'oglas.dart';
 
 class Prijava {
   final String id;
@@ -20,11 +21,14 @@ class Prijava {
     return Prijava(
       id: json['id'],
       oglasId: json['oglas_id'],
-      oglas: Oglas.fromJson(json['oglasi']), // 'oglasi' jer radimo join u selectu
+      oglas: Oglas.fromJson(
+        json['oglasi'],
+      ), // 'oglasi' jer radimo join u selectu
       createdAt: DateTime.parse(json['created_at']),
     );
   }
 }
+
 class MojePrijaveEkran extends StatefulWidget {
   const MojePrijaveEkran({super.key});
 
@@ -109,9 +113,9 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
     } catch (e) {
       debugPrint("Greška pri recenziranju: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Greška: $e")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Greška: $e")));
       }
     }
   }
@@ -126,7 +130,9 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
       barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: const Text("Ocijeni poslodavca", textAlign: TextAlign.center),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -145,7 +151,8 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                       color: Colors.orange,
                       size: 35,
                     ),
-                    onPressed: () => setDialogState(() => odabranaOcjena = index + 1),
+                    onPressed: () =>
+                        setDialogState(() => odabranaOcjena = index + 1),
                   );
                 }),
               ),
@@ -154,7 +161,9 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                 controller: komentarController,
                 decoration: InputDecoration(
                   hintText: "Napišite iskustvo...",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 maxLines: 2,
               ),
@@ -166,7 +175,9 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
               child: const Text("Odustani"),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4A2C29)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4A2C29),
+              ),
               onPressed: () {
                 Navigator.pop(context);
                 _spremiRecenzijuAutora(
@@ -175,7 +186,10 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                   komentar: komentarController.text,
                 );
               },
-              child: const Text("Spremi", style: TextStyle(color: Colors.white)),
+              child: const Text(
+                "Spremi",
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -184,21 +198,21 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
   }
 
   Future<void> _otkaziPrijavu(String prijavaId) async {
-  try {
-    await supabase.from('prijave').delete().eq('id', prijavaId);
-    
-    if (mounted) {
-      // 1. Osvježavamo trenutni ekran (npr. listu tvojih prijava)
-      setState(() {}); 
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Prijava otkazana')),
-      );
+    try {
+      await supabase.from('prijave').delete().eq('id', prijavaId);
+
+      if (mounted) {
+        // 1. Osvježavamo trenutni ekran (npr. listu tvojih prijava)
+        setState(() {});
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Prijava otkazana')));
+      }
+    } catch (e) {
+      debugPrint("Greška pri otkazivanju: $e");
     }
-  } catch (e) {
-    debugPrint("Greška pri otkazivanju: $e");
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -207,84 +221,146 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
     const cardColor = Color(0xFF8F6E68);
 
     return Scaffold(
+      // 1. Postavljamo pozadinu na Scaffold
       backgroundColor: bgColor,
+      // Dopušta krugovima da se vide i iza AppBara
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text("Moje prijave", style: TextStyle(color: darkBrown, fontWeight: FontWeight.bold)),
+        title: const Text(
+          "Moje prijave",
+          style: TextStyle(color: darkBrown, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: darkBrown),
       ),
-      body: FutureBuilder<List<Prijava>>(
-        future: _dohvatiMojePrijave(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: darkBrown));
-          }
+      // 2. Body omotamo u PozadinaKrugovi
+      body: PozadinaKrugovi(
+        child: SafeArea(
+          child: FutureBuilder<List<Prijava>>(
+            future: _dohvatiMojePrijave(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(color: darkBrown),
+                );
+              }
 
-          final prijave = snapshot.data ?? [];
-          if (prijave.isEmpty) {
-            return const Center(
-              child: Text("Nema aktivnih prijava.", style: TextStyle(color: darkBrown)),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(20),
-            itemCount: prijave.length,
-            itemBuilder: (context, index) {
-              final prijava = prijave[index];
-              final oglas = prijava.oglas;
-              final user = supabase.auth.currentUser;
-
-              bool zaposlenSam = oglas.obavljacId == user?.id;
-              bool jeZavrseno = oglas.status == 'obavljen';
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 15),
-                decoration: BoxDecoration(
-                  color: zaposlenSam 
-                      ? (jeZavrseno ? Colors.grey[400] : const Color(0xFF6B8E23)) 
-                      : cardColor,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(15),
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.white24,
-                    child: Icon(
-                      jeZavrseno ? Icons.done_all : (zaposlenSam ? Icons.celebration : Icons.hourglass_top),
-                      color: Colors.white,
+              final prijave = snapshot.data ?? [];
+              if (prijave.isEmpty) {
+                return const Center(
+                  child: Text(
+                    "Nema aktivnih prijava.",
+                    style: TextStyle(
+                      color: darkBrown,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  title: Text(
-                    oglas.naslov,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    jeZavrseno ? "Posao završen" : (zaposlenSam ? "PRIHVAĆENI STE!" : "Na čekanju..."),
-                    style: const TextStyle(color: Colors.white70),
-                  ),
-                  trailing: (jeZavrseno && zaposlenSam)
-                      ? ElevatedButton(
-                          onPressed: () => _pokaziDijalogZaOcjenuAutora(prijava), // Šalje prijavu
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          child: const Text("OCIJENI", style: TextStyle(color: Colors.white, fontSize: 10)),
-                        )
-                      : const Icon(Icons.info_outline, color: Colors.white),
-                  onTap: () => _prikaziUpravljanjePrijavom(context, prijava, zaposlenSam, jeZavrseno),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
                 ),
+                itemCount: prijave.length,
+                itemBuilder: (context, index) {
+                  final prijava = prijave[index];
+                  final oglas = prijava.oglas;
+                  final user = supabase.auth.currentUser;
+
+                  bool zaposlenSam = oglas.obavljacId == user?.id;
+                  bool jeZavrseno = oglas.status == 'obavljen';
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 15),
+                    decoration: BoxDecoration(
+                      color: zaposlenSam
+                          ? (jeZavrseno
+                                ? Colors.grey[400]
+                                : const Color(0xFF6B8E23))
+                          : cardColor,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(15),
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.white24,
+                        child: Icon(
+                          jeZavrseno
+                              ? Icons.done_all
+                              : (zaposlenSam
+                                    ? Icons.celebration
+                                    : Icons.hourglass_top),
+                          color: Colors.white,
+                        ),
+                      ),
+                      title: Text(
+                        oglas.naslov,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        jeZavrseno
+                            ? "Posao završen"
+                            : (zaposlenSam
+                                  ? "PRIHVAĆENI STE!"
+                                  : "Na čekanju..."),
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                      trailing: (jeZavrseno && zaposlenSam)
+                          ? ElevatedButton(
+                              onPressed: () =>
+                                  _pokaziDijalogZaOcjenuAutora(prijava),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: const Text(
+                                "OCIJENI",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            )
+                          : const Icon(Icons.info_outline, color: Colors.white),
+                      onTap: () => _prikaziUpravljanjePrijavom(
+                        context,
+                        prijava,
+                        zaposlenSam,
+                        jeZavrseno,
+                      ),
+                    ),
+                  );
+                },
               );
             },
-          );
-        },
+          ),
+        ),
       ),
     );
   }
 
-  void _prikaziUpravljanjePrijavom(BuildContext context, Prijava prijava, bool zaposlenSam, bool jeZavrseno) {
+  void _prikaziUpravljanjePrijavom(
+    BuildContext context,
+    Prijava prijava,
+    bool zaposlenSam,
+    bool jeZavrseno,
+  ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -297,17 +373,80 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(prijava.oglas.naslov, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            Text("Status posla: ${prijava.oglas.status.toUpperCase()}"),
-            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: () async {
+                var oglasZaPrikaz = prijava.oglas;
+
+                if (oglasZaPrikaz.autorIme == null ||
+                    oglasZaPrikaz.autorIme == 'Nepoznat autor') {
+                  final data = await supabase
+                      .from('profiles')
+                      .select('puno_ime')
+                      .eq('id', oglasZaPrikaz.autorId ?? '')
+                      .maybeSingle();
+
+                  if (data != null) {
+                    // ELEGANTNO: Samo "kopiramo" oglas s novim imenom
+                    oglasZaPrikaz = oglasZaPrikaz.copyWith(
+                      autorIme: data['puno_ime'],
+                    );
+                  }
+                }
+
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DetaljiOglasa(
+                        oglas: oglasZaPrikaz,
+                        samoPregled: true,
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: Column(
+                children: [
+                  Text(
+                    prijava.oglas.naslov,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4A2C29),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  const Text(
+                    "Dodirni za detalje oglasa",
+                    style: TextStyle(fontSize: 12, color: Colors.black45),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 25),
+
             if (zaposlenSam && !jeZavrseno)
-              const Text("🎉 Odabrani ste! Poslodavac će vas uskoro kontaktirati.", textAlign: TextAlign.center),
-            const SizedBox(height: 20),
+              const Text(
+                "Odabrani ste! Poslodavac će vas uskoro kontaktirati.",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: Color.fromARGB(255, 0, 0, 0),
+                ),
+              ),
+
+            const SizedBox(height: 25),
+
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                    ),
                     onPressed: () => Navigator.pop(context),
                     child: const Text("Zatvori"),
                   ),
@@ -316,11 +455,17 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.red),
+                      ),
                       onPressed: () {
                         Navigator.pop(context);
                         _otkaziPrijavu(prijava.id);
                       },
-                      child: const Text("Povuci prijavu", style: TextStyle(color: Colors.red)),
+                      child: const Text(
+                        "Povuci prijavu",
+                        style: TextStyle(color: Colors.red),
+                      ),
                     ),
                   ),
                 ],

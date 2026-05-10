@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart'; // Ključno za klik na tekst
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'opciUvjeti.dart'; // Provjeri putanju do ekrana s uvjetima
 
 // DEFINICIJA SUPABASE KLIJENTA
 final supabase = Supabase.instance.client;
 
-class registracija extends StatefulWidget {
-  const registracija({super.key});
+class RegistracijaEkran extends StatefulWidget {
+  const RegistracijaEkran({super.key});
 
   @override
-  State<registracija> createState() => _registracijaState();
+  State<RegistracijaEkran> createState() => _RegistracijaEkranState();
 }
 
-class _registracijaState extends State<registracija> {
+class _RegistracijaEkranState extends State<RegistracijaEkran> {
   final _imeController = TextEditingController();
   final _emailController = TextEditingController();
   final _telefonController = TextEditingController();
@@ -21,7 +23,7 @@ class _registracijaState extends State<registracija> {
   bool _omoguciGps = false;
   bool _isLoading = false;
 
-  // Boje
+  // Boje usklađene s dizajnom
   static const backgroundColor = Color(0xFFE5D9D6);
   static const circleColor = Color(0xFFD6C8C5);
   static const inputFieldColor = Color(0xFFD1BDB9);
@@ -30,14 +32,18 @@ class _registracijaState extends State<registracija> {
   static const textColor = Color(0xFF2E2E2E);
   static const hintTextColor = Color(0xFF8C5353);
 
-  // Funkcija za registraciju s navigacijom nakon uspjeha
   Future<void> _signUp() async {
-    if (_imeController.text.isEmpty || _emailController.text.isEmpty || _lozinkaController.text.isEmpty || _telefonController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Molimo popunite sva obavezna polja')));
+    if (_imeController.text.isEmpty || _emailController.text.isEmpty || 
+        _lozinkaController.text.isEmpty || _telefonController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Molimo popunite sva obavezna polja'))
+      );
       return;
     }
     if (!_prihvacamUvjete) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Morate prihvatiti uvjete korištenja')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Morate prihvatiti uvjete korištenja'))
+      );
       return;
     }
 
@@ -50,7 +56,7 @@ class _registracijaState extends State<registracija> {
         data: {
           'puno_ime': _imeController.text.trim(),
           'telefon': _telefonController.text.trim(),
-          },
+        },
       );
       
       if (mounted) {
@@ -60,17 +66,19 @@ class _registracijaState extends State<registracija> {
             backgroundColor: Colors.green,
           ),
         );
-
-        // NAKON USPJEHA: Vodi na Odabir ekran i briše povijest (pushReplacement)
         Navigator.pushReplacementNamed(context, '/ekrani/odabir');
       }
     } on AuthException catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.message), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message), backgroundColor: Colors.red)
+        );
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dogodila se neočekivana greška'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dogodila se neočekivana greška'), backgroundColor: Colors.red)
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -92,17 +100,16 @@ class _registracijaState extends State<registracija> {
       backgroundColor: backgroundColor,
       body: Stack(
         children: [
+          // Dekorativni krugovi
           Positioned(
-            top: -120,
-            left: -100,
+            top: -120, left: -100,
             child: CustomPaint(
               size: const Size(280, 280),
               painter: CirclePainter(color: circleColor),
             ),
           ),
           Positioned(
-            bottom: -80,
-            right: -50,
+            bottom: -80, right: -50,
             child: CustomPaint(
               size: const Size(300, 300),
               painter: CirclePainter(color: circleColor),
@@ -116,6 +123,7 @@ class _registracijaState extends State<registracija> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Back gumb
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Container(
@@ -128,12 +136,17 @@ class _registracijaState extends State<registracija> {
                       ),
                     ),
 
-                    const SizedBox(height: 64),
+                    const SizedBox(height: 40),
 
                     const Text(
                       'Registracija',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: darkBrownColor, letterSpacing: 1.2),
+                      style: TextStyle(
+                        fontSize: 36, 
+                        fontWeight: FontWeight.bold, 
+                        color: darkBrownColor, 
+                        letterSpacing: 1.2
+                      ),
                     ),
                     const SizedBox(height: 12),
                     const Text(
@@ -142,7 +155,7 @@ class _registracijaState extends State<registracija> {
                       style: TextStyle(fontSize: 16, color: textColor),
                     ),
 
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 40),
 
                     _buildInputField(_imeController, 'Ime i prezime', Icons.person),
                     const SizedBox(height: 16),
@@ -154,36 +167,31 @@ class _registracijaState extends State<registracija> {
 
                     const SizedBox(height: 24),
 
-                    _buildCheckbox('Prihvaćam uvjete korištenja aplikacije', _prihvacamUvjete, (value) {
+                    // CHECKBOX S LINKOM NA UVJETE
+                    _buildCheckbox('', _prihvacamUvjete, (value) {
                       setState(() => _prihvacamUvjete = value!);
-                    }),
+                    }, isLegal: true),
+
+                    // OBIČAN CHECKBOX ZA GPS
                     _buildCheckbox('Omogući korištenje GPS usluga', _omoguciGps, (value) {
                       setState(() => _omoguciGps = value!);
                     }),
 
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 40),
 
-                    // --- SREĐENI GUMBI ---
                     _isLoading
                         ? const Center(child: CircularProgressIndicator(color: darkBrownColor))
-                        : _buildMainButton(
-                            'Registracija', 
-                            darkBrownColor, // Glavna akcija je tamnija
-                            _signUp,        // Pokreće registraciju
-                          ),
+                        : _buildMainButton('Registracija', darkBrownColor, _signUp),
                           
                     const SizedBox(height: 16),
                     
                     _buildMainButton(
                       'Log in', 
-                      mediumBrownColor, // Pomoćna akcija je svjetlija
-                      () {
-                        Navigator.pushNamed(context, '/ekrani/login');
-                      },
+                      mediumBrownColor, 
+                      () => Navigator.pushNamed(context, '/ekrani/login'),
                     ),
 
                     const SizedBox(height: 24),
-
                     const Text(
                       'Već imate profil?',
                       textAlign: TextAlign.center,
@@ -220,13 +228,46 @@ class _registracijaState extends State<registracija> {
     );
   }
 
-  Widget _buildCheckbox(String title, bool value, ValueChanged<bool?> onChanged) {
+  // MODIFICIRANI CHECKBOX S PODRŠKOM ZA KLIKABILNI TEKST
+  Widget _buildCheckbox(String title, bool value, ValueChanged<bool?> onChanged, {bool isLegal = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
         children: [
-          Checkbox(value: value, onChanged: onChanged, activeColor: darkBrownColor, checkColor: Colors.white),
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 14, color: textColor))),
+          Checkbox(
+            value: value, 
+            onChanged: onChanged, 
+            activeColor: darkBrownColor, 
+            checkColor: Colors.white
+          ),
+          Expanded(
+            child: isLegal 
+              ? RichText(
+                  text: TextSpan(
+                    style: const TextStyle(fontSize: 14, color: textColor, fontFamily: 'Sans Serif'),
+                    children: [
+                      const TextSpan(text: 'Prihvaćam '),
+                      TextSpan(
+                        text: 'uvjete korištenja',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
+                          color: darkBrownColor,
+                        ),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const UvjetiKoristenjaEkran()),
+                            );
+                          },
+                      ),
+                      const TextSpan(text: ' aplikacije'),
+                    ],
+                  ),
+                )
+              : Text(title, style: const TextStyle(fontSize: 14, color: textColor)),
+          ),
         ],
       ),
     );
@@ -248,6 +289,7 @@ class _registracijaState extends State<registracija> {
   }
 }
 
+// Painter za krugove u pozadini
 class CirclePainter extends CustomPainter {
   final Color color;
   CirclePainter({required this.color});

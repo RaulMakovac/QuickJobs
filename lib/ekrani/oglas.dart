@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
-import '/ekrani/glavni_ekran.dart'; // Ovdje je tvoj Oglas model s autorId-om
+import '/ekrani/glavni_ekran.dart'; 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../dekor.dart';
 import '/ekrani/korisnicki_profil.dart';
 
 class DetaljiOglasa extends StatelessWidget {
   final Oglas oglas;
+  final bool samoPregled; 
 
-  const DetaljiOglasa({super.key, required this.oglas});
+  const DetaljiOglasa({
+    super.key, 
+    required this.oglas, 
+    this.samoPregled = false, // Default je false da se gumb vidi na glavnom ekranu
+  });
 
   static const bgColor = Color(0xFFE5D9D6);
   static const darkBrown = Color(0xFF4A2C29);
@@ -30,7 +35,6 @@ class DetaljiOglasa extends StatelessWidget {
                 _buildJobTitleHeader(),
                 const SizedBox(height: 30),
                 
-                // KLJUČNA PROMJENA: Prosljeđujemo context metodi
                 _buildAuthorSection(context), 
                 
                 const SizedBox(height: 30),
@@ -39,8 +43,27 @@ class DetaljiOglasa extends StatelessWidget {
                 _buildDetailRow('Isplata: ${oglas.isplata}€'),
                 const SizedBox(height: 25),
                 _buildDescriptionCard(),
+                
                 const SizedBox(height: 50),
-                _buildApplyButton(context),
+
+                // --- UVJETNI PRIKAZ GUMBA ---
+                if (samoPregled)
+                  const Column(
+                    children: [
+                      Icon(Icons.info_outline, color: darkBrown, size: 40),
+                      SizedBox(height: 10),
+                      Text(
+                        'Pregled aktivne prijave',
+                        style: TextStyle(
+                          color: darkBrown, 
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  _buildApplyButton(context),
               ],
             ),
           ),
@@ -49,11 +72,10 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  // --- REKREIRANA FUNKCIONALNOST KAO U EKRANU "ZAPOSLI" ---
+  // --- SEKCIJA AUTORA ---
   Widget _buildAuthorSection(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Provjera postoji li autorId prije navigacije
         if (oglas.autorId != null && oglas.autorId!.isNotEmpty) {
           Navigator.push(
             context,
@@ -64,12 +86,7 @@ class DetaljiOglasa extends StatelessWidget {
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Profil autora trenutno nije dostupan."),
-              backgroundColor: Colors.orange,
-            ),
-          );
+          _showSnack(context, "Profil autora nije dostupan.", isError: true);
         }
       },
       child: Row(
@@ -89,7 +106,6 @@ class DetaljiOglasa extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      decoration: TextDecoration.underline,
                     ),
                   ),
                 ],
@@ -113,8 +129,60 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  // --- OSTALI POMOĆNI WIDGETI ---
+  // --- GUMB ZA PRIJAVU ---
+  Widget _buildApplyButton(BuildContext context) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () => _handlePrijava(context),
+          child: Container(
+            width: 90,
+            height: 90,
+            decoration: const BoxDecoration(
+              color: cardColor,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5)),
+              ],
+            ),
+            child: const Icon(Icons.check, size: 55, color: Colors.black),
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Prijavi se na posao!',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+      ],
+    );
+  }
 
+  // --- LOGIKA PRIJAVE ---
+  Future<void> _handlePrijava(BuildContext context) async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
+      _showSnack(context, 'Morate biti prijavljeni!', isError: true);
+      return;
+    }
+
+    try {
+      await supabase.from('prijave').insert({
+        'oglas_id': oglas.id,
+        'korisnik_id': user.id,
+      });
+
+      if (context.mounted) {
+        _showSnack(context, 'Uspješno prijavljeni!', isError: false);
+        Navigator.pop(context); // Vraća na glavni ekran
+      }
+    } catch (e) {
+      if (context.mounted) _showSnack(context, 'Već ste prijavljeni ili je došlo do greške.', isError: true);
+    }
+  }
+
+  // --- POMOĆNI DIZAJN ---
   Widget _buildAppBar(BuildContext context) {
     return Row(
       children: [
@@ -144,11 +212,7 @@ class DetaljiOglasa extends StatelessWidget {
       child: Text(
         oglas.naslov,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
+        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -168,64 +232,12 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  Widget _buildApplyButton(BuildContext context) {
-    return Column(
-      children: [
-        GestureDetector(
-          onTap: () => _handlePrijava(context),
-          child: Container(
-            width: 90,
-            height: 90,
-            decoration: const BoxDecoration(
-              color: cardColor,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5)),
-              ],
-            ),
-            child: const Icon(Icons.check, size: 55, color: Colors.black),
-          ),
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          'Prijavi se na posao!',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _handlePrijava(BuildContext context) async {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-
-    if (user == null) {
-      _showSnack(context, 'Morate biti prijavljeni!', isError: true);
-      return;
-    }
-
-    try {
-      await supabase.from('prijave').insert({
-        'oglas_id': oglas.id,
-        'korisnik_id': user.id,
-      });
-
-      if (context.mounted) {
-        _showSnack(context, 'Uspješno prijavljeni!', isError: false);
-        Navigator.pop(context);
-      }
-    } on PostgrestException catch (e) {
-      if (context.mounted) _showSnack(context, 'Baza javlja: ${e.message}', isError: true);
-    } catch (e) {
-      if (context.mounted) _showSnack(context, 'Neočekivana greška: $e', isError: true);
-    }
-  }
-
   void _showSnack(BuildContext context, String message, {required bool isError}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red : Colors.green,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -253,10 +265,7 @@ class DetaljiOglasa extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w500,
-        ),
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
       ),
     );
   }

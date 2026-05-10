@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import '../dekor.dart';
+import 'korisnicki_profil.dart';
+import 'glavni_ekran.dart'; 
+import 'oglas.dart';       
 
 class ChatIndividualni extends StatefulWidget {
   final String sobaId;
   final String naslovOglasa;
   final String imeSugovornika;
+  final String sugovornikId;
+  final String oglasId;
+  final bool jeArhiviran;
 
   const ChatIndividualni({
     super.key,
     required this.sobaId,
     required this.naslovOglasa,
     required this.imeSugovornika,
+    required this.sugovornikId,
+    required this.oglasId,
+    required this.jeArhiviran,
   });
 
   @override
@@ -29,83 +39,190 @@ class _ChatIndividualniState extends State<ChatIndividualni> {
     super.initState();
   }
 
-  Future<void> _posaljiPoruku() async {
+  // --- LOGIKA ZA NAVIGACIJU NA OGLAS ---
+  Future<void> _navigirajNaOglas() async {
+    try {
+      final res = await supabase.from('oglasi').select().eq('id', widget.oglasId).maybeSingle();
+      if (res != null && mounted) {
+        final oglasObjekt = Oglas.fromJson(res); 
+        Navigator.push(context, MaterialPageRoute(builder: (context) => DetaljiOglasa(oglas: oglasObjekt, samoPregled: true)));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Greška pri otvaranju oglasa.")));
+    }
+  }
+
+  Future<void> _posaljiPoruku(bool chatZakljucan) async {
+    if (chatZakljucan) return; // Dvostruka sigurnost
     final tekst = _porukaController.text.trim();
     if (tekst.isEmpty) return;
     _porukaController.clear();
     try {
-      await supabase.from('poruke').insert({
-        'soba_id': widget.sobaId,
-        'posiljatelj_id': mojId,
-        'tekst': tekst,
-      });
+      await supabase.from('poruke').insert({'soba_id': widget.sobaId, 'posiljatelj_id': mojId, 'tekst': tekst});
+      await supabase.from('chat_sobe').update({'updated_at': DateTime.now().toIso8601String()}).eq('id', widget.sobaId);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Greška: $e")));
-      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Greška: $e")));
+    }
+  }
+
+  Future<void> _obrisiChatOdmah() async {
+    final potvrda = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Obriši razgovor?"),
+        content: const Text("Želite li odmah trajno obrisati ovaj razgovor?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Ne")),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Obriši", style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (potvrda == true) {
+      await supabase.from('chat_sobe').delete().eq('id', widget.sobaId);
+      if (mounted) Navigator.pop(context);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const bojaPozadine = Color(0xFFE5D9D6);
-    const bojaHeaderNosac = Color(0xFFC7B1AA); // Maknuto 'č'
+    // KLJUČNA PROMJENA: Slušamo promjene na ovoj specifičnoj sobi u realnom vremenu
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: supabase.from('chat_sobe').stream(primaryKey: ['id']).eq('id', widget.sobaId),
+      builder: (context, snapshot) {
+        // Provjeravamo status iz baze, ako stream još nije povukao podatke koristimo početni widget.jeArhiviran
+        bool arhiviranIzBaze = widget.jeArhiviran;
+        if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+          arhiviranIzBaze = snapshot.data!.first['status'] == 'arhivirano';
+        }
 
-    return Scaffold(
-      backgroundColor: bojaPozadine,
-      appBar: AppBar(
-        toolbarHeight: 80,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: Row(
-          children: [
-            IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back, color: Colors.black, size: 28),
-            ),
-            const CircleAvatar(backgroundColor: Colors.white, radius: 20, child: Icon(Icons.person_outline, color: Colors.black)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(widget.imeSugovornika, style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(color: const Color(0xFF8F6E68), borderRadius: BorderRadius.circular(20)),
-                    child: Text(widget.naslovOglasa, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+        final bojaHeader = arhiviranIzBaze ? Colors.grey[700]! : const Color(0xFFBFA2A2);
+        final bojaPozadine = arhiviranIzBaze ? const Color(0xFFD1CBC9) : const Color(0xFFE5D9D6);
+
+        return Scaffold(
+          backgroundColor: bojaPozadine,
+          appBar: AppBar(
+            toolbarHeight: 90,
+            backgroundColor: bojaHeader,
+            automaticallyImplyLeading: false,
+            elevation: 0,
+            actions: [
+              if (arhiviranIzBaze)
+                IconButton(icon: const Icon(Icons.delete_forever, color: Colors.white), onPressed: _obrisiChatOdmah),
+            ],
+            title: _buildAppBarTitle(),
+          ),
+          body: PozadinaKrugovi(
+            child: Column(
+              children: [
+                Expanded(
+                  child: Opacity(
+                    opacity: arhiviranIzBaze ? 0.6 : 1.0,
+                    child: _buildMessagesStream(),
                   ),
-                ],
-              ),
-            ),
-            IconButton(onPressed: () {}, icon: const Icon(Icons.phone, color: Colors.black)),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: supabase.from('poruke').stream(primaryKey: ['id']).eq('soba_id', widget.sobaId).order('created_at', ascending: false),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                final poruke = snapshot.data!;
-                return ListView.builder(
-                  reverse: true,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: poruke.length,
-                  itemBuilder: (context, index) {
-                    final p = poruke[index];
-                    return _buildChatBubble(p['tekst'], p['created_at'], p['posiljatelj_id'] == mojId);
-                  },
-                );
-              },
+                ),
+                // Ako je arhiviran, prikaži banner, inače input polje
+                arhiviranIzBaze ? _buildArhiviranBanner() : _buildInputArea(arhiviranIzBaze),
+              ],
             ),
           ),
-          _buildInputArea(bojaHeaderNosac),
+        );
+      },
+    );
+  }
+
+  Widget _buildAppBarTitle() {
+    return Row(
+      children: [
+        IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22)),
+        GestureDetector(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => KorisnickiProfil(prikazaniKorisnikId: widget.sugovornikId))),
+          child: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.person_outline, color: Colors.black)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.imeSugovornika, style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: _navigirajNaOglas,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(color: const Color(0xFF8F6E68), borderRadius: BorderRadius.circular(15)),
+                  child: Text(widget.naslovOglasa, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMessagesStream() {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: supabase.from('poruke').stream(primaryKey: ['id']).eq('soba_id', widget.sobaId).order('created_at', ascending: false),
+      builder: (context, snapshot) {
+        final poruke = snapshot.data ?? [];
+        return ListView.builder(
+          reverse: true,
+          padding: const EdgeInsets.all(16),
+          itemCount: poruke.length,
+          itemBuilder: (context, index) => _buildChatBubble(poruke[index]['tekst'], poruke[index]['created_at'], poruke[index]['posiljatelj_id'] == mojId),
+        );
+      },
+    );
+  }
+
+  Widget _buildArhiviranBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.1),
+        border: const Border(top: BorderSide(color: Colors.black12)),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.lock_clock_outlined, color: Colors.black45),
+          SizedBox(height: 8),
+          Text("Razgovor je arhiviran jer je posao završen.", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
+          Text("Slanje poruka više nije moguće.", style: TextStyle(fontSize: 12, color: Colors.black45)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildInputArea(bool zakljucano) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      color: const Color(0xFFBEA3A3),
+      child: SafeArea(
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _porukaController,
+                enabled: !zakljucano,
+                decoration: InputDecoration(
+                  hintText: "Upišite poruku...",
+                  fillColor: const Color(0xFFE5D9D6),
+                  filled: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            CircleAvatar(
+              backgroundColor: const Color(0xFF4A2C29),
+              child: IconButton(
+                onPressed: () => _posaljiPoruku(zakljucano), 
+                icon: const Icon(Icons.send, color: Colors.white, size: 20)
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -116,43 +233,17 @@ class _ChatIndividualniState extends State<ChatIndividualni> {
       alignment: ja ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: ja ? Colors.white : const Color(0xFFC7B1AA),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(15),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(tekst),
+            Text(tekst, style: const TextStyle(fontSize: 15)),
+            const SizedBox(height: 4),
             Text(formatirano, style: const TextStyle(fontSize: 10, color: Colors.black38)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputArea(Color pozadina) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      color: pozadina,
-      child: SafeArea(
-        child: Row(
-          children: [
-            const Icon(Icons.add),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextField(
-                controller: _porukaController,
-                decoration: InputDecoration(
-                  hintText: "Poruka...",
-                  fillColor: const Color(0xFFE5D9D6),
-                  filled: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
-                ),
-              ),
-            ),
-            IconButton(onPressed: _posaljiPoruku, icon: const Icon(Icons.send)),
           ],
         ),
       ),

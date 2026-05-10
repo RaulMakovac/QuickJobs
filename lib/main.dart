@@ -41,7 +41,6 @@ class MyApp extends StatelessWidget {
       title: 'QuickJobs',
       debugShowCheckedModeBanner: false, 
       builder: (context, child) {
-    // Ovo "presreće" crtanje svakog ekrana
     return PozadinaKrugovi(
       child: child ?? const SizedBox(),
     );
@@ -53,7 +52,7 @@ class MyApp extends StatelessWidget {
     // rute
     routes: {
       '/': (context) => const intro(),
-      '/ekrani/registracija': (context) => const registracija(),
+      '/ekrani/registracija': (context) => const RegistracijaEkran(),
       '/ekrani/login': (context) => const login(),
       '/ekrani/odabir': (context) => const odabir(),
       '/ekrani/glavni_ekran': (context) => const glavni_ekran(),
