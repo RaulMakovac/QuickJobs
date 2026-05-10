@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:quickjobs/ekrani/oglas.dart';
 import 'korisnicki_profil.dart';
 import '../dekor.dart';
+
 // --- MODELI -- podaci za prikaz
 class Oglas {
   final String id;
@@ -31,7 +32,9 @@ class Oglas {
   });
   //definiranje podataka, izjednačavanje naziva u kodu i naziva u supabaseu
   factory Oglas.fromJson(Map<String, dynamic> json) {
+    // 1. Pokušaj izvući podatke iz join-a (ako koristiš .select('*, autor:profiles(...)'))
     final profileData = json['autor'] as Map<String, dynamic>?;
+
     return Oglas(
       id: json['id'] ?? '',
       naslov: json['naslov_oglasa'] ?? 'Bez naslova',
@@ -43,10 +46,11 @@ class Oglas {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
-      autorId: profileData != null ? profileData['id'] : json['autor_id'],
-      autorIme: profileData != null
-          ? profileData['puno_ime']
-          : 'Nepoznat autor',
+
+      // 2. KLJUČNI POPRAVAK: Provjeravamo sve moguće lokacije ID-a
+      autorId: profileData?['id'] ?? json['autor_id']?.toString(),
+
+      autorIme: profileData?['puno_ime'] ?? 'Nepoznat autor',
     );
   }
 }
@@ -144,10 +148,16 @@ class _glavni_ekranState extends State<glavni_ekran> {
                     const Icon(Icons.settings, size: 35, color: darkBrown),
                     _buildCentralLogo(),
                     IconButton(
-                      icon: const Icon(Icons.account_box, size: 35, color: darkBrown),
+                      icon: const Icon(
+                        Icons.account_box,
+                        size: 35,
+                        color: darkBrown,
+                      ),
                       onPressed: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const KorisnickiProfil()),
+                        MaterialPageRoute(
+                          builder: (context) => const KorisnickiProfil(),
+                        ),
                       ),
                     ),
                   ],
@@ -167,7 +177,8 @@ class _glavni_ekranState extends State<glavni_ekran> {
                       ),
                       child: TextField(
                         controller: _searchController,
-                        onChanged: (value) => setState(() => _searchQuery = value),
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value),
                         decoration: InputDecoration(
                           icon: const Icon(Icons.search, color: Colors.black54),
                           hintText: 'Pretraži poslove...',
@@ -177,7 +188,9 @@ class _glavni_ekranState extends State<glavni_ekran> {
                               _prikaziFiltere ? Icons.expand_less : Icons.tune,
                               color: darkBrown,
                             ),
-                            onPressed: () => setState(() => _prikaziFiltere = !_prikaziFiltere),
+                            onPressed: () => setState(
+                              () => _prikaziFiltere = !_prikaziFiltere,
+                            ),
                           ),
                         ),
                       ),
@@ -198,8 +211,20 @@ class _glavni_ekranState extends State<glavni_ekran> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text("Min. isplata", style: TextStyle(fontWeight: FontWeight.bold, color: darkBrown)),
-                                Text("${_minIsplata.toInt()}€", style: const TextStyle(fontWeight: FontWeight.bold, color: darkBrown)),
+                                const Text(
+                                  "Min. isplata",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: darkBrown,
+                                  ),
+                                ),
+                                Text(
+                                  "${_minIsplata.toInt()}€",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: darkBrown,
+                                  ),
+                                ),
                               ],
                             ),
                             Slider(
@@ -209,20 +234,33 @@ class _glavni_ekranState extends State<glavni_ekran> {
                               divisions: 20,
                               activeColor: darkBrown,
                               inactiveColor: Colors.white24,
-                              onChanged: (value) => setState(() => _minIsplata = value),
+                              onChanged: (value) =>
+                                  setState(() => _minIsplata = value),
                             ),
                             const SizedBox(height: 10),
-                            const Text("Lokacija", style: TextStyle(fontWeight: FontWeight.bold, color: darkBrown)),
+                            const Text(
+                              "Lokacija",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: darkBrown,
+                              ),
+                            ),
                             const SizedBox(height: 5),
                             TextField(
                               controller: _lokacijaController,
                               readOnly: true,
                               decoration: InputDecoration(
                                 hintText: "Svi gradovi (uskoro)",
-                                prefixIcon: const Icon(Icons.location_on, color: darkBrown),
+                                prefixIcon: const Icon(
+                                  Icons.location_on,
+                                  color: darkBrown,
+                                ),
                                 filled: true,
                                 fillColor: Colors.white24,
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
                               ),
                             ),
                           ],
@@ -239,13 +277,15 @@ class _glavni_ekranState extends State<glavni_ekran> {
                 child: RefreshIndicator(
                   color: darkBrown,
                   onRefresh: () async {
-                    setState(() {}); 
+                    setState(() {});
                   },
                   child: FutureBuilder<List<Oglas>>(
                     future: dohvatiOglase(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator(color: darkBrown));
+                        return const Center(
+                          child: CircularProgressIndicator(color: darkBrown),
+                        );
                       }
 
                       final oglasi = snapshot.data ?? [];
@@ -264,7 +304,8 @@ class _glavni_ekranState extends State<glavni_ekran> {
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         itemCount: oglasi.length,
-                        itemBuilder: (context, index) => _buildOglasCard(oglasi[index]),
+                        itemBuilder: (context, index) =>
+                            _buildOglasCard(oglasi[index]),
                       );
                     },
                   ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import '../dekor.dart';
 class ObjavaOglasa extends StatefulWidget {
   const ObjavaOglasa({super.key});
 
@@ -71,7 +71,9 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
-      body: SafeArea(
+      extendBody: true,
+      body: PozadinaKrugovi(
+        child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
           child: Column(
@@ -137,7 +139,7 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                 ),
               ),
               
-              const SizedBox(height: 40),
+              const SizedBox(height: 130),
 
               // Gumb za objavu (Kvačica)
               GestureDetector(
@@ -153,6 +155,7 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

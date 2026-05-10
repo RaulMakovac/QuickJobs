@@ -35,7 +35,7 @@ class _ZaposliState extends State<Zaposli> {
     return lista;
   }
 
-  // --- LOGIKA: PRIHVATI KANDIDATA ---
+ 
   // --- LOGIKA: PRIHVATI KANDIDATA ---
   Future<void> _prihvatiKandidata(String kandidatId) async {
     try {
@@ -126,8 +126,9 @@ class _ZaposliState extends State<Zaposli> {
               child: CircularProgressIndicator(color: darkBrown),
             );
           }
-          if (snapshot.hasError)
+          if (snapshot.hasError) {
             return Center(child: Text("Greška: ${snapshot.error}"));
+          }
 
           final prijave = snapshot.data ?? [];
           final brojPrijava = prijave.length;

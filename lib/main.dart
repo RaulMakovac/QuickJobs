@@ -12,7 +12,7 @@ import 'ekrani/moji_oglasi.dart';
 import 'ekrani/korisnicki_profil.dart';
 import 'ekrani/moje_prijave.dart';
 import 'ekrani/chat_hub.dart';
-
+import 'dekor.dart';
 
 
 
@@ -39,7 +39,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'QuickJobs',
-      debugShowCheckedModeBanner: false, // Miče debug watermark
+      debugShowCheckedModeBanner: false, 
+      builder: (context, child) {
+    // Ovo "presreće" crtanje svakog ekrana
+    return PozadinaKrugovi(
+      child: child ?? const SizedBox(),
+    );
+  },
 
      //initialRoute: '/ekrani/glavni_ekran',
      initialRoute: '/',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'chat.dart';
+import '../dekor.dart';
 
 class ChatHub extends StatefulWidget {
   const ChatHub({super.key});
@@ -69,8 +70,9 @@ class _ChatHubState extends State<ChatHub> {
 
     return Scaffold(
       backgroundColor: bojaPozadine,
-      body: SafeArea(
-        child: Column(
+      body: PozadinaKrugovi(
+        child: SafeArea(
+          child: Column(
           children: [
             _buildHeader(tamnoSmedja),
             const Padding(
@@ -113,6 +115,7 @@ class _ChatHubState extends State<ChatHub> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

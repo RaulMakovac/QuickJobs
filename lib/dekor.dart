@@ -23,6 +23,15 @@ class PozadinaKrugovi extends StatelessWidget {
             painter: _CirclePainter(color: krugBoja),
           ),
         ),
+
+         Positioned(
+          top: -120,
+          right: -100,
+          child: CustomPaint(
+            size: const Size(200, 200),
+            painter: _CirclePainter(color: krugBoja),
+          ),
+        ),
         // Donji desni krug
         Positioned(
           bottom: -120,
