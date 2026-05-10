@@ -1,8 +1,8 @@
-# 🛠️ QuickJobs – Poveži se i odradi posao
+#  QuickJobs – Poveži se i odradi posao
 
 QuickJobs je moderna Flutter aplikacija dizajnirana za brzo spajanje ljudi koji trebaju pomoć s obavljanjem sitnih poslova i lokalnih radnika (freelancera). Bilo da tražiš nekoga za popravak, dostavu ili čišćenje, QuickJobs omogućuje transparentnu komunikaciju i jednostavno upravljanje oglasima.
 
-## ✨ Ključne Značajke
+##  Ključne Značajke
 
 * **Pregled poslova:** Dinamička lista dostupnih oglasa s filtriranjem po isplati i lokaciji.
 * **Upravljanje oglasima:** Kreiranje, ažuriranje i arhiviranje vlastitih oglasa.
@@ -11,7 +11,7 @@ QuickJobs je moderna Flutter aplikacija dizajnirana za brzo spajanje ljudi koji 
 * **Recenzije i ocjene:** Sustav povratnih informacija nakon svakog obavljenog posla.
 * **Sticky UI komponente:** Moderno korisničko sučelje s interaktivnim elementima i fluidnim skrolanjem.
 
-## 🚀 Tehnologije
+##  Tehnologije
 
 * **Frontend:** [Flutter](https://flutter.dev) (Dart)
 * **Backend & Baza:** [Supabase](https://supabase.com) (PostgreSQL)
