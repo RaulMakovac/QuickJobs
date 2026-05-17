@@ -70,10 +70,28 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
 
   bool _isEditing = false;
   bool _isLoading = true;
-  bool _prikaziSveRecenzije = false; // Kontrola skupljanja recenzija
+  bool _prikaziSveRecenzije = false;
   double _prosjecnaOcjena = 0.0;
   List<Oglas> _mojiOglasi = [];
   List<Recenzija> _recenzije = [];
+
+  Future<bool> _provjeriSmijeLiReportati(String prikazaniKorisnikId) async {
+    final user = supabase.auth.currentUser;
+    if (user == null || user.id == prikazaniKorisnikId) return false;
+
+    try {
+      final response = await supabase
+          .from('oglasi')
+          .select('id')
+          .or('status_oglasa.eq.završen,status_oglasa.eq.obavljen')
+          .or('and(autor_id.eq.${user.id},obavljac_id.eq.$prikazaniKorisnikId),and(autor_id.eq.$prikazaniKorisnikId,obavljac_id.eq.${user.id})');
+
+      return (response as List).isNotEmpty;
+    } catch (e) {
+      debugPrint("Greška pri provjeri suradnje: $e");
+      return false;
+    }
+  }
 
   @override
   void initState() {
@@ -158,71 +176,118 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: bgColor,
-        body: PozadinaKrugovi(child: Center(child: CircularProgressIndicator(color: darkBrown))),
-      );
-    }
-
-    return Scaffold(
+@override
+Widget build(BuildContext context) {
+  if (_isLoading) {
+    return const Scaffold(
       backgroundColor: bgColor,
       body: PozadinaKrugovi(
-        child: SafeArea(
-          bottom: false,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // --- SCROLLABLE NAV BAR ---
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back_ios, color: darkBrown),
-                      ),
-                      if (jeLiMojProfil)
-                        Row(
-                          children: [
-                            if (_isEditing)
-                              IconButton(
-                                onPressed: _spremiPromjene,
-                                icon: const Icon(Icons.check_circle, color: Colors.green, size: 30),
-                              ),
-                            IconButton(
-                              onPressed: () => setState(() => _isEditing = !_isEditing),
-                              icon: Icon(_isEditing ? Icons.cancel : Icons.edit, color: darkBrown),
-                            ),
-                            IconButton(onPressed: _odjava, icon: const Icon(Icons.logout, color: Colors.redAccent)),
-                          ],
-                        ),
-                    ],
-                  ),
-                ),
-                _buildUserHeader(),
-                const SizedBox(height: 25),
-                _buildEditableField("Ime i prezime:", _imeController),
-                _buildEditableField("E-mail adresa:", _emailController, enabled: false),
-                _buildEditableField("Broj telefona:", _telefonController),
-                _buildAboutMeField(),
-                const SizedBox(height: 25),
-                _buildIzdaniPoslovi(),
-                const SizedBox(height: 25),
-                _buildRecenzijeSekcija(),
-                const SizedBox(height: 50),
-              ],
-            ),
-          ),
+        child: Center(
+          child: CircularProgressIndicator(color: darkBrown),
         ),
       ),
     );
   }
+
+  return Scaffold(
+    backgroundColor: bgColor,
+    // Pozadina ponovno ide na vrh kako bi pokrila cijeli zaslon (uključujući i notch)
+    body: PozadinaKrugovi(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            // Proširuje skrol samo na visinu ekrana, sprječava rastezanje pozadine prema dolje
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min, // Stupac zauzima samo onoliko koliko mu treba
+                    children: [
+                      // --- NAV BAR S AKCIJAMA ILI REPORT GUMBOM ---
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.arrow_back_ios_new, color: darkBrown, size: 26),
+                            ),
+                            if (jeLiMojProfil)
+                              Row(
+                                children: [
+                                  if (_isEditing)
+                                    IconButton(
+                                      onPressed: _spremiPromjene,
+                                      icon: const Icon(Icons.check_circle, color: Colors.green, size: 28),
+                                    ),
+                                  IconButton(
+                                    onPressed: () => setState(() => _isEditing = !_isEditing),
+                                    icon: Icon(_isEditing ? Icons.cancel_rounded : Icons.edit_rounded, color: darkBrown, size: 26),
+                                  ),
+                                  IconButton(
+                                    onPressed: _odjava, 
+                                    icon: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 26),
+                                  ),
+                                ],
+                              )
+                            else
+                              // --- REPORT PANEL ZA TUĐE PROFILE ---
+                              FutureBuilder<bool>(
+                                future: _provjeriSmijeLiReportati(ciljaniUserId),
+                                builder: (context, snapshot) {
+                                  if (snapshot.data == true) {
+                                    return IconButton(
+                                      icon: const Icon(Icons.flag_outlined, color: Colors.redAccent, size: 30),
+                                      tooltip: "Reportaj korisnika",
+                                      onPressed: () => _prikaziDijalogZaReportProfila(context, ciljaniUserId),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                      
+                      _buildUserHeader(),
+                      const SizedBox(height: 25),
+                      
+                      _buildEditableField("Ime i prezime:", _imeController),
+                      _buildEditableField("E-mail adresa:", _emailController, enabled: false),
+                      _buildEditableField("Broj telefona:", _telefonController),
+                      _buildAboutMeField(),
+                      
+                      // --- IZDANI POSLOVI ---
+                      if (_mojiOglasi.isNotEmpty) ...[
+                        const SizedBox(height: 25),
+                        _buildIzdaniPoslovi(),
+                      ],
+                      
+                      // --- RECENZIJE ---
+                      if (_recenzije.isNotEmpty) ...[
+                        const SizedBox(height: 25),
+                        _buildRecenzijeSekcija(),
+                      ],
+                      
+                      const SizedBox(height: 10),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    ),
+  );
+}
 
   Widget _buildUserHeader() {
     return Row(
@@ -236,11 +301,13 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_imeController.text, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            Text(_imeController.text, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: darkBrown)),
+            const SizedBox(height: 4),
             Row(
               children: [
-                Text("$_prosjecnaOcjena", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                const Icon(Icons.star, color: Colors.amber, size: 20),
+                Text("$_prosjecnaOcjena", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: darkBrown)),
+                const SizedBox(width: 4),
+                const Icon(Icons.star, color: Colors.amber, size: 22),
               ],
             ),
           ],
@@ -262,12 +329,12 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
               color: cardColor,
               borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8)),
             ),
-            child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
+            child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
           ),
           TextField(
             controller: controller,
             enabled: mozeEditirati,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: darkBrown),
             decoration: InputDecoration(
               filled: true,
               fillColor: inputBg,
@@ -282,8 +349,11 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
     );
   }
 
-  Widget _buildAboutMeField() {
-    return Column(
+Widget _buildAboutMeField() {
+  bool mozeEditirati = jeLiMojProfil && _isEditing;
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 12), // Dodan razmak prema dnu
+    child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
@@ -292,22 +362,36 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
             color: cardColor,
             borderRadius: BorderRadius.only(topLeft: Radius.circular(8), topRight: Radius.circular(8)),
           ),
-          child: const Text("Opis profila", style: TextStyle(color: Colors.white, fontSize: 11)),
+          child: const Text(
+            "Opis profila", 
+            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)
+          ),
         ),
         TextField(
           controller: _opisController,
-          enabled: jeLiMojProfil && _isEditing,
+          enabled: mozeEditirati,
           maxLines: 4,
-          style: const TextStyle(fontSize: 13),
+          style: const TextStyle(fontSize: 13, color: darkBrown, fontWeight: FontWeight.w500),
           decoration: InputDecoration(
             filled: true,
             fillColor: inputBg,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+            isDense: true, // Ovo sprječava nekontrolirano rastezanje
+            contentPadding: const EdgeInsets.all(12),
+            border: OutlineInputBorder(
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(10),
+                bottomRight: Radius.circular(10),
+                topRight: Radius.circular(10), // Usklađeno s gornjim labelom
+              ),
+              borderSide: BorderSide.none,
+            ),
+            suffixIcon: mozeEditirati ? const Icon(Icons.edit, size: 16, color: darkBrown) : null,
           ),
         ),
       ],
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildIzdaniPoslovi() {
     if (_mojiOglasi.isEmpty) return const SizedBox.shrink();
@@ -315,7 +399,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(jeLiMojProfil ? "Moji izdani poslovi" : "Izdani poslovi korisnika",
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: darkBrown)),
         const SizedBox(height: 10),
         Container(
           height: 120,
@@ -337,7 +421,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                       child: const Icon(Icons.work_outline, color: Colors.white),
                     ),
                     const SizedBox(height: 5),
-                    Text(oglas.naslov, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10), maxLines: 2),
+                    Text(oglas.naslov, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, color: darkBrown), maxLines: 2),
                   ],
                 ),
               );
@@ -355,7 +439,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Recenzije", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const Text("Recenzije", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: darkBrown)),
         const SizedBox(height: 10),
         AnimatedSize(
           duration: const Duration(milliseconds: 300),
@@ -393,9 +477,113 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
             ],
           ),
           Text("Za posao: ${r.oglasNaslov}", style: const TextStyle(color: Colors.white70, fontSize: 11, fontStyle: FontStyle.italic)),
-          if (r.komentar != null) ...[const Divider(color: Colors.white24), Text(r.komentar!, style: const TextStyle(color: Colors.white, fontSize: 13))],
+          if (r.komentar != null && r.komentar!.isNotEmpty) ...[
+            const Divider(color: Colors.white24), 
+            Text(r.komentar!, style: const TextStyle(color: Colors.white, fontSize: 13))
+          ],
         ],
       ),
     );
   }
+
+  // --- POP-UP DIJALOG ZA REPORT PROFILA KORISNIKA ---
+  void _prikaziDijalogZaReportProfila(BuildContext context, String korisnikId) {
+  // Postavljamo početnu vrijednost koja točno odgovara jednoj od stavki u listi ispod
+  String privremeniRazlog = "Scam / Neisplata";
+  final komentarController = TextEditingController();
+
+  showDialog(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.report_problem_rounded, color: Colors.red),
+            SizedBox(width: 10),
+            Text("Reportaj korisnika", style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Odaberite razlog zašto prijavljujete ovog korisnika nakon obavljenog posla:"),
+            const SizedBox(height: 15),
+            DropdownButtonFormField<String>(
+              // Koristimo 'value' umjesto 'initialValue' jer se dinamički mijenja kroz setDialogState
+              value: privremeniRazlog,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.grey[200],
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+              items: ["Scam / Neisplata", "Lažno izvršen posao", "Neprimjereno ponašanje", "Ostalo"]
+                  .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) {
+                  setDialogState(() {
+                    privremeniRazlog = v; // Sada ispravno ažurira lokalno stanje unutar dijaloga
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: komentarController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: "Opišite detaljnije što se dogodilo...",
+                filled: true,
+                fillColor: Colors.grey[200],
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              komentarController.dispose(); // Očisti kontroler pri izlazu
+              Navigator.pop(context);
+            }, 
+            child: const Text("Odustani"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4A2C29)),
+            onPressed: () async {
+              final user = supabase.auth.currentUser;
+              if (user == null) return;
+
+              try {
+                await supabase.from('reports').insert({
+                  'prijavitelj_id': user.id,
+                  'oglas_id': null, // Izravna prijava profila nakon posla
+                  'prijavljeni_korisnik_id': korisnikId,
+                  'razlog': privremeniRazlog, // Sada šalje stvarno odabranu vrijednost!
+                  'komentar': komentarController.text,
+                });
+
+                komentarController.dispose(); // Očisti kontroler nakon uspješnog slanja
+
+                if (context.mounted) {
+                  Navigator.pop(context); // Zatvori dijalog
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Korisnik reportan. Hvala na povratnoj informaciji!"), 
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                debugPrint("Greška pri slanju reporta na profil: $e");
+              }
+            },
+            child: const Text("Pošalji", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 }

@@ -2,10 +2,29 @@ import 'package:flutter/material.dart';
 import '../dekor.dart';
 import 'postavke.dart';
 import 'moji_oglasi.dart';
-// Uvezi ostale potrebne ekrane (ChatHub, Profil, DodajOglas...)
+import '../banProvjera.dart'; // Tvoja datoteka za provjeru bana
 
-class JednostavniIzbornik extends StatelessWidget {
+class JednostavniIzbornik extends StatefulWidget {
   const JednostavniIzbornik({super.key});
+
+  @override
+  State<JednostavniIzbornik> createState() => _JednostavniIzbornikState();
+}
+
+class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
+  
+  @override
+  void initState() {
+    super.initState();
+    
+    // Čim se izbornik iscrta, odmah provjeri je li korisnik pokupio ban
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final banPoruka = await AuthProvjera.ProvjeriBanKorisnika();
+      if (banPoruka != null && mounted) {
+        AuthProvjera.prikaziBanDialog(context, banPoruka);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +77,7 @@ class JednostavniIzbornik extends StatelessWidget {
                     ),
                     _buildVelikaTipka(
                       context,
-                      ikona: Icons.gavel_rounded, // Ili Icons.engineering_rounded
+                      ikona: Icons.gavel_rounded,
                       naslov: "Moji oglasi",
                       boja: bojaIkone,
                       pozadina: bojaPozadineIkone,
