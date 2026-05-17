@@ -1,17 +1,20 @@
-# quickjobs
+#  QuickJobs – Poveži se i odradi posao
 
-A new Flutter project.
+QuickJobs je moderna Flutter aplikacija dizajnirana za brzo spajanje ljudi koji trebaju pomoć s obavljanjem sitnih poslova i lokalnih radnika (freelancera). Bilo da tražiš nekoga za popravak, dostavu ili čišćenje, QuickJobs omogućuje transparentnu komunikaciju i jednostavno upravljanje oglasima.
 
-## Getting Started
+##  Ključne Značajke
 
-This project is a starting point for a Flutter application.
+* **Pregled poslova:** Dinamička lista dostupnih oglasa s filtriranjem po isplati i lokaciji.
+* **Upravljanje oglasima:** Kreiranje, ažuriranje i arhiviranje vlastitih oglasa.
+* **Sustav prijava:** Korisnici se mogu prijaviti na poslove, a autori oglasa biraju najbolje kandidate.
+* **Real-time Chat:** Integrirani sustav poruka za dogovaranje detalja unutar aplikacije.
+* **Recenzije i ocjene:** Sustav povratnih informacija nakon svakog obavljenog posla.
+* **Sticky UI komponente:** Moderno korisničko sučelje s interaktivnim elementima i fluidnim skrolanjem.
 
-A few resources to get you started if this is your first Flutter project:
+##  Tehnologije
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+* **Frontend:** [Flutter](https://flutter.dev) (Dart)
+* **Backend & Baza:** [Supabase](https://supabase.com) (PostgreSQL)
+* **Autentifikacija:** Supabase Auth
+* **Upravljanje stanjem:** Stateful Widgets & Streams
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
