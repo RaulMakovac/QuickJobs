@@ -40,6 +40,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
   final supabase = Supabase.instance.client;
 
   // 1. DOHVAĆANJE PRIJAVA
+  // 1. DOHVAĆANJE PRIJAVA S ISPRAVNIM ALIASIMA
   Future<List<Prijava>> _dohvatiMojePrijave() async {
     final user = supabase.auth.currentUser;
     if (user == null) return [];
@@ -51,11 +52,11 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
             *,
             oglasi:oglas_id (
               id,
-              naslov_oglasa,
-              opis_oglasa,
-              isplata_oglasa,
-              adresa_oglasa,
-              status_oglasa,
+              naslov:naslov_oglasa,   
+              opis:opis_oglasa,       
+              isplata:isplata_oglasa, 
+              adresa:adresa_oglasa,   
+              status:status_oglasa,   
               autor_id,
               obavljac_id,
               created_at

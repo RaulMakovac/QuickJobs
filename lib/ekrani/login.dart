@@ -40,7 +40,7 @@ class _LoginState extends State<login> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      
+
       if (mounted) {
         // Nakon uspješnog logina, šaljemo korisnika na Home (odabir)
         // pushReplacementNamed briše login iz povijesti tako da se ne može vratiti "nazad" na login
@@ -55,7 +55,10 @@ class _LoginState extends State<login> {
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Dogodila se neočekivana greška'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('Dogodila se neočekivana greška'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -105,10 +108,17 @@ class _LoginState extends State<login> {
                     alignment: Alignment.centerLeft,
                     child: Container(
                       margin: const EdgeInsets.only(top: 16),
-                      decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+                      decoration: const BoxDecoration(
+                        color: Color.fromARGB(0, 0, 0, 0),
+                        shape: BoxShape.circle,
+                      ),
                       child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: () => Navigator.pop(context),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new,
+                          size: 26,
+                          color: Color(0xFF4A2C29),
+                        ),
                       ),
                     ),
                   ),
@@ -119,7 +129,11 @@ class _LoginState extends State<login> {
                   const Text(
                     'Dobrodošli natrag',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: darkBrownColor),
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: darkBrownColor,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -131,18 +145,32 @@ class _LoginState extends State<login> {
                   const SizedBox(height: 48),
 
                   // INPUT POLJA
-                  _buildInputField(_emailController, 'E-mail adresa', Icons.email, isEmail: true),
+                  _buildInputField(
+                    _emailController,
+                    'E-mail adresa',
+                    Icons.email,
+                    isEmail: true,
+                  ),
                   const SizedBox(height: 16),
-                  _buildInputField(_passwordController, 'Lozinka', Icons.lock, isPassword: true),
+                  _buildInputField(
+                    _passwordController,
+                    'Lozinka',
+                    Icons.lock,
+                    isPassword: true,
+                  ),
 
                   const SizedBox(height: 12),
-                  
+
                   // Zaboravljena lozinka
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {}, // Ovdje možeš dodati reset lozinke kasnije
-                      child: const Text('Zaboravili ste lozinku?', style: TextStyle(color: darkBrownColor)),
+                      onPressed:
+                          () {}, // Ovdje možeš dodati reset lozinke kasnije
+                      child: const Text(
+                        'Zaboravili ste lozinku?',
+                        style: TextStyle(color: darkBrownColor),
+                      ),
                     ),
                   ),
 
@@ -150,17 +178,29 @@ class _LoginState extends State<login> {
 
                   // GUMB ZA PRIJAVU
                   _isLoading
-                      ? const Center(child: CircularProgressIndicator(color: darkBrownColor))
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: darkBrownColor,
+                          ),
+                        )
                       : ElevatedButton(
                           onPressed: _signIn,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: darkBrownColor,
                             foregroundColor: Colors.white,
                             minimumSize: const Size(double.infinity, 60),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
                             elevation: 4,
                           ),
-                          child: const Text('Prijava', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          child: const Text(
+                            'Prijava',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
 
                   const Spacer(flex: 2),
@@ -171,8 +211,17 @@ class _LoginState extends State<login> {
                     children: [
                       const Text('Nemate račun?'),
                       TextButton(
-                        onPressed: () => Navigator.pushNamed(context, '/ekrani/registracija'),
-                        child: const Text('Registrirajte se', style: TextStyle(fontWeight: FontWeight.bold, color: darkBrownColor)),
+                        onPressed: () => Navigator.pushNamed(
+                          context,
+                          '/ekrani/registracija',
+                        ),
+                        child: const Text(
+                          'Registrirajte se',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: darkBrownColor,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -186,10 +235,18 @@ class _LoginState extends State<login> {
     );
   }
 
-  Widget _buildInputField(TextEditingController controller, String hintText, IconData icon,
-      {bool isPassword = false, bool isEmail = false}) {
+  Widget _buildInputField(
+    TextEditingController controller,
+    String hintText,
+    IconData icon, {
+    bool isPassword = false,
+    bool isEmail = false,
+  }) {
     return Container(
-      decoration: BoxDecoration(color: inputFieldColor, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: inputFieldColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: TextField(
         controller: controller,
         obscureText: isPassword,
@@ -200,7 +257,10 @@ class _LoginState extends State<login> {
           hintStyle: const TextStyle(color: hintTextColor),
           prefixIcon: Icon(icon, color: hintTextColor),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 16,
+          ),
         ),
       ),
     );
@@ -213,9 +273,16 @@ class CirclePainter extends CustomPainter {
   CirclePainter({required this.color});
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(size.width / 2, size.height / 2), size.width / 2, paint);
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height / 2),
+      size.width / 2,
+      paint,
+    );
   }
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

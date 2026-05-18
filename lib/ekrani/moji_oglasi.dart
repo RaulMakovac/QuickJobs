@@ -185,21 +185,35 @@ class _MojiOglasiState extends State<MojiOglasi> {
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Container(
-            decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
-            child: IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Colors.white)),
+ Widget _buildHeader() {
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(10, 20, 20, 20), 
+    child: Row(
+      children: [
+        IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(
+            Icons.arrow_back_ios_new, 
+            size: 26, 
+            color: Color(0xFF4A2C29), 
           ),
-          const Expanded(child: Text("Moji oglasi", textAlign: TextAlign.center, style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF4A2C29)))),
-          const SizedBox(width: 45),
-        ],
-      ),
-    );
-  }
+        ),
+        const Expanded(
+          child: Text(
+            "Moji oglasi", 
+            textAlign: TextAlign.center, 
+            style: TextStyle(
+              fontSize: 26, 
+              fontWeight: FontWeight.bold, 
+              color: Color(0xFF4A2C29),
+            ),
+          ),
+        ),
+        const SizedBox(width: 48), 
+      ],
+    ),
+  );
+}
 
   Widget _buildMojOglasCard(Oglas oglas) {
     bool imaRadnika = oglas.obavljacId != null;

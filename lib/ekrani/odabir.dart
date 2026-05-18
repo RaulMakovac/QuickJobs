@@ -31,14 +31,14 @@ class odabir extends StatelessWidget {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Container(
-                      margin: const EdgeInsets.only(top: 16),
-                      decoration: const BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
-                      ),
+                      margin: const EdgeInsets.only(top: 16),                                        
                       child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: () => Navigator.pop(context),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new,
+                          size: 26,
+                          color: Color(0xFF4A2C29),
+                        ),
                       ),
                     ),
                   ),
@@ -86,8 +86,11 @@ class odabir extends StatelessWidget {
                         title: 'Tražim posao',
                         svgPath: 'assets/images/trazim_posao.svg',
                         onTap: () {
-                          // Također vodi na isti ekran (ili neki drugi ako želiš)
-                          Navigator.pushNamed(context, '/ekrani/jednostavni_ekran');
+                          
+                          Navigator.pushNamed(
+                            context,
+                            '/ekrani/jednostavni_ekran',
+                          );
                         },
                       ),
                     ],

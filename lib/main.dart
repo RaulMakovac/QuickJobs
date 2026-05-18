@@ -13,7 +13,7 @@ import 'ekrani/korisnicki_profil.dart';
 import 'ekrani/moje_prijave.dart';
 import 'ekrani/chat_hub.dart';
 import 'dekor.dart';
-
+import 'ekrani/jednostavni_ekran.dart';
 
 
 void main() async {
@@ -62,7 +62,7 @@ class MyApp extends StatelessWidget {
       '/ekrani/korisnicki_profil': (context) => const KorisnickiProfil(),
       '/ekrani/moje_prijave': (context) => const MojePrijaveEkran(),
       '/ekrani/chat_hub': (context) => const ChatHub(),
-      
+      '/ekrani/jednostavni_ekran': (context) => const JednostavniIzbornik(),
 
     },
   );
