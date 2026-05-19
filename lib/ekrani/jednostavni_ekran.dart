@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../dekor.dart';
 import 'postavke.dart';
 import 'moji_oglasi.dart';
-import '../banProvjera.dart'; // Tvoja datoteka za provjeru bana
+import '../banProvjera.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class JednostavniIzbornik extends StatefulWidget {
   const JednostavniIzbornik({super.key});
@@ -17,7 +18,6 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
   void initState() {
     super.initState();
     
-    // Čim se izbornik iscrta, odmah provjeri je li korisnik pokupio ban
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final banPoruka = await AuthProvjera.ProvjeriBanKorisnika();
       if (banPoruka != null && mounted) {
@@ -36,86 +36,103 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
       backgroundColor: const Color(0xFFE5D9D6),
       body: PozadinaKrugovi(
         child: SafeArea(
-          child: Column(
-            children: [
-              const SizedBox(height: 40),
-              // LOGO SEKCIJA (Povećalo s čekićem iz tvog dizajna)
-              _buildLogo(tamnoSmedja),
-              const SizedBox(height: 50),
-              
-              // GRID S IKONAMA
-              Expanded(
-                child: GridView.count(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
-                  crossAxisCount: 2, // Dva stupca
-                  mainAxisSpacing: 30,
-                  crossAxisSpacing: 30,
-                  children: [
-                    _buildVelikaTipka(
-                      context,
-                      ikona: Icons.settings_rounded,
-                      naslov: "Postavke",
-                      boja: bojaIkone,
-                      pozadina: bojaPozadineIkone,
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PostavkeEkran(dolaziIzJednostavnog: true,))),
-                    ),
-                    _buildVelikaTipka(
-                      context,
-                      ikona: Icons.person_rounded,
-                      naslov: "Moj profil",
-                      boja: bojaIkone,
-                      pozadina: bojaPozadineIkone,
-                      onTap: () => Navigator.pushNamed(context, '/ekrani/korisnicki_profil'),
-                    ),
-                    _buildVelikaTipka(
-                      context,
-                      ikona: Icons.chat_bubble_rounded,
-                      naslov: "Poruke",
-                      boja: bojaIkone,
-                      pozadina: bojaPozadineIkone,
-                      onTap: () => Navigator.pushNamed(context, '/ekrani/chat_hub'),
-                    ),
-                    _buildVelikaTipka(
-                      context,
-                      ikona: Icons.gavel_rounded,
-                      naslov: "Moji oglasi",
-                      boja: bojaIkone,
-                      pozadina: bojaPozadineIkone,
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MojiOglasi())),
-                    ),
-                  ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10.0),
+            child: Column(
+              children: [
+                const SizedBox(height: 30),
+                // LOGO SEKCIJA (Gornji dio ekrana)
+                _buildLogo(tamnoSmedja),
+                
+                // SREDIŠNJI DIO - Sve je centrirano i nema skrolanja
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // 2x2 Grid za osnovne opcije
+                      GridView.count(
+                        shrinkWrap: true, // Omogućuje gridu da zauzme samo onoliko mjesta koliko mu treba
+                        physics: const NeverScrollableScrollPhysics(), // GASI SCROLLANJE
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 20,
+                        crossAxisSpacing: 20,
+                        childAspectRatio: 1.1, // Blago pravokutni oblik za moderniji izgled
+                        children: [
+                          _buildVelikaTipka(
+                            context,
+                            ikona: Icons.settings_rounded,
+                            naslov: "Postavke",
+                            boja: bojaIkone,
+                            pozadina: bojaPozadineIkone,
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PostavkeEkran(dolaziIzJednostavnog: true,))),
+                          ),
+                          _buildVelikaTipka(
+                            context,
+                            ikona: Icons.person_rounded,
+                            naslov: "Moj profil",
+                            boja: bojaIkone,
+                            pozadina: bojaPozadineIkone,
+                            onTap: () => Navigator.pushNamed(context, '/ekrani/korisnicki_profil'),
+                          ),
+                          _buildVelikaTipka(
+                            context,
+                            ikona: Icons.chat_bubble_rounded,
+                            naslov: "Poruke",
+                            boja: bojaIkone,
+                            pozadina: bojaPozadineIkone,
+                            onTap: () => Navigator.pushNamed(context, '/ekrani/chat_hub'),
+                          ),
+                          _buildVelikaTipka(
+                            context,
+                            ikona: Icons.handyman_rounded,
+                            naslov: "Moji oglasi",
+                            boja: bojaIkone,
+                            pozadina: bojaPozadineIkone,
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MojiOglasi())),
+                          ),
+                        ],
+                      ),
+                      
+                      const SizedBox(height: 20),
+                      
+                      // RESTRUKTURIRANI GUMB: Široka, istaknuta kartica za dodavanje oglasa
+                      _buildGlavniDodajOglasGumb(context, tamnoSmedja),
+                    ],
+                  ),
                 ),
-              ),
-              
-              // ISTAKNUTA TIPKA ZA DODAVANJE OGLASA (Dno)
-              _buildDodajOglasGumb(context, tamnoSmedja),
-              const SizedBox(height: 40),
-            ],
+                
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-
-  Widget _buildLogo(Color boja) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: boja, width: 3),
-          ),
-          child: Icon(Icons.search_rounded, size: 60, color: boja),
+Widget _buildLogo(Color boja) {
+  return Column(
+    children: [
+      // Prikaz tvog novog SVG logotipa iz Figme
+      SvgPicture.asset(
+        'assets/images/QJ_Logo.svg', // Putanja do datoteke koju si definirao u pubspec.yaml
+        width: 100,             // Prilagodi veličinu (visinu i širinu) po želji
+        height: 100,
+        
+        
+      ),
+      const SizedBox(height: 14),
+      Text(
+        "QuickJobs",
+        style: TextStyle(
+          fontSize: 26, 
+          fontWeight: FontWeight.bold, 
+          color: boja, 
+          letterSpacing: 1.5,
         ),
-        const SizedBox(height: 10),
-        Text(
-          "QuickJobs",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: boja, letterSpacing: 1.2),
-        ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   Widget _buildVelikaTipka(BuildContext context, {
     required IconData ikona,
@@ -124,25 +141,23 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
     required Color pozadina,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(30),
-      child: Container(
-        decoration: BoxDecoration(
-          color: pozadina.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(30),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 5)),
-          ],
-        ),
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      color: pozadina.withOpacity(0.9),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(ikona, size: 55, color: boja),
-            const SizedBox(height: 10),
+            Icon(ikona, size: 44, color: boja),
+            const SizedBox(height: 12),
             Text(
               naslov,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: boja),
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: boja),
             ),
           ],
         ),
@@ -150,29 +165,35 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
     );
   }
 
-  Widget _buildDodajOglasGumb(BuildContext context, Color boja) {
-    return InkWell(
-      onTap: () => Navigator.pushNamed(context, '/ekrani/objava_oglasa'),
-      child: Column(
-        children: [
-          Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              color: boja,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(color: boja.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8)),
-              ],
-            ),
-            child: const Icon(Icons.add, size: 50, color: Colors.white),
+  // NOVI DIZAJN: Široka horizontalna kartica koja spaja vizualni prostor na dnu grida
+  Widget _buildGlavniDodajOglasGumb(BuildContext context, Color boja) {
+    return Card(
+      elevation: 4,
+      shadowColor: boja.withOpacity(0.4),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      color: boja,
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, '/ekrani/objava_oglasa'),
+        borderRadius: BorderRadius.circular(24),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 24.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.add_circle_outline_rounded, size: 30, color: Colors.white),
+              const SizedBox(width: 12),
+              const Text(
+                "Objavi novi oglas",
+                style: TextStyle(
+                  fontSize: 18, 
+                  fontWeight: FontWeight.bold, 
+                  color: Colors.white,
+                  letterSpacing: 0.5
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          Text(
-            "Dodaj oglas",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: boja),
-          ),
-        ],
+        ),
       ),
     );
   }

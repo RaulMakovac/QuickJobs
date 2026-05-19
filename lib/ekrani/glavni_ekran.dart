@@ -6,7 +6,9 @@ import 'korisnicki_profil.dart';
 import '../dekor.dart';
 import 'postavke.dart';
 import '../banProvjera.dart';
-// --- MODEL Oglas (Vraćen copyWith i factory) ---
+import 'package:flutter_svg/flutter_svg.dart';
+
+// --- MODEL Oglas ---
 class Oglas {
   final String id;
   final String naslov;
@@ -19,6 +21,7 @@ class Oglas {
   final String? obavljacId;
   final DateTime createdAt;
   final bool jeReportan;
+  final String kategorija;
 
   Oglas({
     required this.id,
@@ -32,6 +35,7 @@ class Oglas {
     this.obavljacId,
     required this.createdAt,
     this.jeReportan = false,
+    this.kategorija = "Ostalo",
   });
 
   Oglas copyWith({String? autorIme}) {
@@ -47,13 +51,12 @@ class Oglas {
       createdAt: createdAt,
       autorIme: autorIme ?? this.autorIme,
       jeReportan: jeReportan,
+      kategorija: kategorija,
     );
   }
 
   factory Oglas.fromJson(Map<String, dynamic> json) {
     final profileData = json['autor'] as Map<String, dynamic>?;
-
-    // Čitamo podatke iz tablice 'reports'
     final reportsList = json['reports'] as List?;
     bool reportan = reportsList != null && reportsList.isNotEmpty;
 
@@ -69,8 +72,9 @@ class Oglas {
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
       autorId: profileData?['id'] ?? json['autor_id']?.toString(),
-      autorIme: profileData?['puno_ime'] ?? 'Nepoznat autor',
+      autorIme: profileData?['puno_ime'] ?? 'Autor oglasa',
       jeReportan: reportan,
+      kategorija: json['kategorija'] ?? 'Ostalo',
     );
   }
 }
@@ -85,9 +89,10 @@ class glavni_ekran extends StatefulWidget {
 class _glavni_ekranState extends State<glavni_ekran> {
   final supabase = Supabase.instance.client;
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _lokacijaController = TextEditingController();
+
   String _searchQuery = "";
   double _minIsplata = 0;
+  String? _odabranaKategorija;
   bool _prikaziFiltere = false;
 
   static const bgColor = Color(0xFFE5D9D6);
@@ -110,7 +115,9 @@ class _glavni_ekranState extends State<glavni_ekran> {
 
       var query = supabase
           .from('oglasi')
-          .select('*, autor:profiles!oglasi_autor_id_fkey(puno_ime), reports(id)')
+          .select(
+            '*, autor:profiles!oglasi_autor_id_fkey(puno_ime), reports(id)',
+          )
           .eq('status_oglasa', 'otvoren')
           .filter('obavljac_id', 'is', null);
 
@@ -119,9 +126,19 @@ class _glavni_ekranState extends State<glavni_ekran> {
       }
 
       query = query.neq('autor_id', user.id);
-      if (_searchQuery.isNotEmpty)
+
+      if (_searchQuery.isNotEmpty) {
         query = query.ilike('naslov_oglasa', '%$_searchQuery%');
-      if (_minIsplata > 0) query = query.gte('isplata_oglasa', _minIsplata);
+      }
+
+      if (_minIsplata > 0) {
+        query = query.gte('isplata_oglasa', _minIsplata);
+      }
+
+      if (_odabranaKategorija != null &&
+          _odabranaKategorija != "Sve kategorije") {
+        query = query.eq('kategorija', _odabranaKategorija!);
+      }
 
       final response = await query.order('created_at', ascending: false);
       return (response as List).map((json) => Oglas.fromJson(json)).toList();
@@ -130,18 +147,17 @@ class _glavni_ekranState extends State<glavni_ekran> {
     }
   }
 
-@override
-void initState() {
-  super.initState();
-  
-  // Čim se ekran učita, provjeri je li korisnik u međuvremenu baniran
-  WidgetsBinding.instance.addPostFrameCallback((_) async {
-    final banPoruka = await AuthProvjera.ProvjeriBanKorisnika();
-    if (banPoruka != null && mounted) {
-      AuthProvjera.prikaziBanDialog(context, banPoruka);
-    }
-  });
-}
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final banPoruka = await AuthProvjera.ProvjeriBanKorisnika();
+      if (banPoruka != null && mounted) {
+        AuthProvjera.prikaziBanDialog(context, banPoruka);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -150,7 +166,7 @@ void initState() {
         child: SafeArea(
           child: CustomScrollView(
             slivers: [
-              // 1. HEADER - Nestaje pri scrollu
+              // 1. HEADER
               SliverAppBar(
                 automaticallyImplyLeading: false,
                 backgroundColor: const Color.fromARGB(0, 0, 0, 0),
@@ -194,25 +210,32 @@ void initState() {
                 ),
               ),
 
-              // 2. SEARCH BAR - Lepi se na vrh, proziran da se vide krugovi
+              // 2. SEARCH BAR & FILTERS - Spojeni panel koji se rasteže
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _StickySearchDelegate(
-                  visina: _prikaziFiltere ? 255 : 80,
+                  visina: _prikaziFiltere
+                      ? 265
+                      : 80, // Malo povećana visina radi boljeg layouta
                   child: Container(
-                    // Poluprozirna boja omogućuje krugovima da se vide
-                    color: const Color.fromARGB(0, 0, 0, 0),
+                    decoration: BoxDecoration(
+                      color: _prikaziFiltere
+                          ? searchBarColor.withOpacity(0.95)
+                          : const Color.fromARGB(0, 0, 0, 0),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(25),
+                        topRight: Radius.circular(25),
+                        bottomLeft: Radius.circular(25),
+                        bottomRight: Radius.circular(25),
+                      ),
+                    ),
                     padding: const EdgeInsets.only(
                       left: 25,
                       right: 25,
                       top: 10,
-                      bottom: 5,
                     ),
                     child: Column(
-                      children: [
-                        _buildSearchBar(),
-                        if (_prikaziFiltere) _buildFilterPanel(),
-                      ],
+                      children: [_buildSearchBar(), _buildFilterPanel()],
                     ),
                   ),
                 ),
@@ -277,16 +300,11 @@ void initState() {
   }
 
   Widget _buildCentralLogo() {
-    return Container(
+    return SvgPicture.asset(
+      'assets/images/QJ_Logo.svg',
       width: 75,
       height: 75,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.black, width: 2),
-      ),
-      child: const Center(
-        child: Icon(Icons.handyman, size: 40, color: Colors.black),
-      ),
+      fit: BoxFit.contain,
     );
   }
 
@@ -316,67 +334,119 @@ void initState() {
     );
   }
 
+  // FIKSIRANO: Korištenjem OverflowBox-a i micanjem paddinga u nulu rješavamo kompletno "9.0 pixels bottom overflow"
   Widget _buildFilterPanel() {
-    return Container(
-      margin: const EdgeInsets.only(top: 10),
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: searchBarColor.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    List<String> stavkeKategorija = [
+      "Sve kategorije",
+      ...kategorijeSaIkonama.keys,
+    ];
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      height: _prikaziFiltere ? 170 : 0,
+      margin: EdgeInsets.only(top: _prikaziFiltere ? 10 : 0),
+      // Kada se zatvara, padding mora biti 0, inače on sam stvara overflow
+      padding: EdgeInsets.all(_prikaziFiltere ? 15 : 0),
+      decoration: const BoxDecoration(),
+      clipBehavior: Clip.none,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 300),
+        opacity: _prikaziFiltere ? 1.0 : 0.0,
+        // OverflowBox dopušta elementima da zadrže svoju veličinu dok se kontejner skuplja u nulu
+        child: OverflowBox(
+          maxHeight: 170,
+          alignment: Alignment.topCenter,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Min. isplata",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: darkBrown,
+                    ),
+                  ),
+                  Text(
+                    "${_minIsplata.toInt()}€",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: darkBrown,
+                    ),
+                  ),
+                ],
+              ),
+              Slider(
+                value: _minIsplata,
+                min: 0,
+                max: 200,
+                divisions: 20,
+                activeColor: darkBrown,
+                inactiveColor: Colors.white24,
+                onChanged: (value) => setState(() => _minIsplata = value),
+              ),
+              const SizedBox(height: 5),
               const Text(
-                "Min. isplata",
+                "Kategorija posla",
                 style: TextStyle(fontWeight: FontWeight.bold, color: darkBrown),
               ),
-              Text(
-                "${_minIsplata.toInt()}€",
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _odabranaKategorija ?? "Sve kategorije",
+                dropdownColor: searchBarColor,
                 style: const TextStyle(
-                  fontWeight: FontWeight.bold,
                   color: darkBrown,
+                  fontWeight: FontWeight.w600,
                 ),
+                decoration: InputDecoration(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 15,
+                    vertical: 10,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white30,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(15),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                items: stavkeKategorija.map((String kategorija) {
+                  return DropdownMenuItem<String>(
+                    value: kategorija,
+                    child: Row(
+                      children: [
+                        Icon(
+                          kategorijeSaIkonama[kategorija] ??
+                              Icons.layers_rounded,
+                          color: darkBrown,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(kategorija),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (novoStanje) {
+                  setState(() {
+                    _odabranaKategorija = novoStanje;
+                  });
+                },
               ),
             ],
           ),
-          Slider(
-            value: _minIsplata,
-            min: 0,
-            max: 200,
-            divisions: 20,
-            activeColor: darkBrown,
-            inactiveColor: Colors.white24,
-            onChanged: (value) => setState(() => _minIsplata = value),
-          ),
-          const Text(
-            "Lokacija",
-            style: TextStyle(fontWeight: FontWeight.bold, color: darkBrown),
-          ),
-          const SizedBox(height: 5),
-          TextField(
-            controller: _lokacijaController,
-            readOnly: true,
-            decoration: InputDecoration(
-              hintText: "Svi gradovi (uskoro)",
-              prefixIcon: const Icon(Icons.location_on, color: darkBrown),
-              filled: true,
-              fillColor: Colors.white24,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildOglasCard(Oglas oglas) {
+    final ikonaKategorije =
+        kategorijeSaIkonama[oglas.kategorija] ?? Icons.more_horiz_rounded;
+
     return GestureDetector(
       onTap: () async {
         await Navigator.push(
@@ -399,8 +469,8 @@ void initState() {
               child: Container(
                 width: 70,
                 height: 70,
-                color: Colors.green[200],
-                child: const Icon(Icons.image, color: Colors.white),
+                color: const Color(0xFFE5D9D6).withOpacity(0.25),
+                child: Icon(ikonaKategorije, color: Colors.white, size: 35),
               ),
             ),
             const SizedBox(width: 15),
@@ -515,10 +585,10 @@ void initState() {
   }
 }
 
-// --- DELEGAT ZA SEARCH BAR ---
 class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
   final double visina;
+
   _StickySearchDelegate({required this.child, required this.visina});
 
   @override
@@ -532,11 +602,24 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
-    return child;
+    return Container(
+      color: const Color(
+        0xFFE5D9D6,
+      ), // Tvoja bgColor - ovo "gasi" overflow vizualno
+      child: ClipRect(
+        child: OverflowBox(
+          minHeight: 0,
+          maxHeight: visina,
+          alignment: Alignment.topCenter,
+          child: SizedBox(height: visina, child: child),
+        ),
+      ),
+    );
   }
 
   @override
   bool shouldRebuild(_StickySearchDelegate oldDelegate) {
-    return oldDelegate.visina != visina || oldDelegate.child != child;
+    // Ovo osigurava da se delegat osvježi kad se visina promijeni
+    return oldDelegate.visina != visina;
   }
 }

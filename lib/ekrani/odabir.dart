@@ -78,7 +78,7 @@ class odabir extends StatelessWidget {
                         svgPath: 'assets/images/trazim_radnika.svg',
                         onTap: () {
                           // Vodi na novi ekran s oglasima
-                          Navigator.pushNamed(context, '/ekrani/glavni_ekran');
+                          Navigator.pushNamed(context, '/ekrani/jednostavni_ekran');
                         },
                       ),
                       _buildRoleCard(
@@ -89,7 +89,7 @@ class odabir extends StatelessWidget {
                           
                           Navigator.pushNamed(
                             context,
-                            '/ekrani/jednostavni_ekran',
+                            '/ekrani/glavni_ekran',
                           );
                         },
                       ),

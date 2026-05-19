@@ -1,54 +1,93 @@
 import 'package:flutter/material.dart';
 import 'package:quickjobs/ekrani/jednostavni_ekran.dart';
-import 'package:quickjobs/ekrani/glavni_ekran.dart'; // Uvezi svoj standardni početni ekran
+import 'package:quickjobs/ekrani/glavni_ekran.dart'; 
 import '../dekor.dart';
 import 'opciUvjeti.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PostavkeEkran extends StatelessWidget {
-  // Ključni parametar koji određuje izgled i funkcionalnost prebacivanja moda
   final bool dolaziIzJednostavnog;
   const PostavkeEkran({super.key, this.dolaziIzJednostavnog = false});
-void _odjava(BuildContext context) async {
-  // Definiraj boje lokalno ili uvezi iz dekora
-  const tamnoSmedja = Color(0xFF4A2C29);
-  const bojaPozadine = Color(0xFFE5D9D6);
 
-  bool? potvrda = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: bojaPozadine,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text(
-        "Odjava", 
-        style: TextStyle(color: tamnoSmedja, fontWeight: FontWeight.bold)
-      ),
-      content: const Text("Jeste li sigurni da se želite odjaviti?"),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false), 
-          child: const Text("Odustani", style: TextStyle(color: Colors.black54))
+  // --- LOGIKA ZA BRISANJE PROFILA I RAČUNA ---
+  void _obrisiRacun(BuildContext context) async {
+    const tamnoSmedja = Color(0xFF4A2C29);
+    const bojaPozadine = Color(0xFFE5D9D6);
+    final supabase = Supabase.instance.client;
+
+    bool? potvrda = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: bojaPozadine,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
+            const SizedBox(width: 10),
+            const Text(
+              "Brisanje računa", 
+              style: TextStyle(color: tamnoSmedja, fontWeight: FontWeight.bold)
+            ),
+          ],
         ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, true),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.redAccent,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+        content: const Text(
+          "Jeste li potpuno sigurni da želite obrisati svoj račun?\n\n"
+          "Ova akcija je nepovratna i izbrisat će sve vaše podatke, oglase i recenzije.",
+          style: TextStyle(color: Colors.black87),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false), 
+            child: const Text("Odustani", style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold))
           ),
-          child: const Text("Odjavi se", style: TextStyle(color: Colors.white)),
-        ),
-      ],
-    ),
-  );
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+            ),
+            child: const Text("Briši račun", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
 
-  if (potvrda == true) {
-    // Koristimo instancu supabasea (pazi da je uvezena ili dostupna)
-    await Supabase.instance.client.auth.signOut();
+    if (potvrda == true) {
+  try {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final userId = user.id; // Spremi ID prije odjave
+    //briši korisnika pozivom funkcije iz supabasea
+    await supabase.rpc('potpuno_obrisi_korisnika');
+    // 1. Prvo napravi signOut da očistiš lokalne tokene i sesiju u aplikaciji
+   
+    await supabase.from('profiles').delete().eq('id', userId);
+
     if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Vaš račun je uspješno i trajno obrisan."),
+          backgroundColor: Colors.green,
+        ),
+      );
       Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+    }
+  } catch (e) {
+    debugPrint("Greška pri brisanju računa: $e");
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Greška pri brisanju: $e"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 }
+  }
+
   @override
   Widget build(BuildContext context) {
     const tamnoSmedja = Color(0xFF4A2C29);
@@ -67,7 +106,6 @@ void _odjava(BuildContext context) async {
                     // PRVA GRUPA: Općenito i način rada
                     _buildPostavkeGrupa([
                       _PostavkaItem(
-                        // Dinamička ikona i naslov ovisno o trenutnom modu
                         ikona: dolaziIzJednostavnog 
                             ? Icons.dashboard_customize_rounded 
                             : Icons.auto_awesome_motion_rounded,
@@ -76,14 +114,12 @@ void _odjava(BuildContext context) async {
                             : "Jednostavan način rada",
                         onTap: () {
                           if (dolaziIzJednostavnog) {
-                            // Vraćamo se na standardni glavni ekran
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(builder: (context) => const glavni_ekran()),
                               (route) => false,
                             );
                           } else {
-                            // Idemo na jednostavni izbornik
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(builder: (context) => const JednostavniIzbornik()),
@@ -103,11 +139,14 @@ void _odjava(BuildContext context) async {
                           );
                         },
                       ),
+                      // Zamijenjena odjava s brisanjem računa
                       _PostavkaItem(
-                        ikona: Icons.logout_rounded,
-                        naslov: "Odjava",
-                        onTap: () => _odjava(context),           
+                        ikona: Icons.delete_forever_rounded,
+                        naslov: "Obriši moj račun",
+                        onTap: () => _obrisiRacun(context),           
                         isZadnji: true,
+                        bojaTeksta: Colors.red[700],
+                        bojaIkone: Colors.red[700],
                       ),
                     ]),
 
@@ -176,6 +215,7 @@ class _PostavkaItem extends StatelessWidget {
   final VoidCallback onTap;
   final bool isZadnji;
   final Color? bojaTeksta;
+  final Color? bojaIkone;
 
   const _PostavkaItem({
     required this.ikona,
@@ -183,6 +223,7 @@ class _PostavkaItem extends StatelessWidget {
     required this.onTap,
     this.isZadnji = false,
     this.bojaTeksta,
+    this.bojaIkone,
   });
 
   @override
@@ -196,7 +237,7 @@ class _PostavkaItem extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
             child: Row(
               children: [
-                Icon(ikona, color: const Color(0xFF4A2C29), size: 24),
+                Icon(ikona, color: bojaIkone ?? const Color(0xFF4A2C29), size: 24),
                 const SizedBox(width: 20),
                 Expanded(
                   child: Text(

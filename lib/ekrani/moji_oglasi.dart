@@ -3,7 +3,7 @@ import 'package:quickjobs/ekrani/azuriraj_oglas.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/ekrani/glavni_ekran.dart';
 import 'zaposli.dart';
-import '../dekor.dart';
+import '../dekor.dart'; // Ovdje se nalazi naša zajednička mapa kategorijeSaIkonama
 
 class MojiOglasi extends StatefulWidget {
   const MojiOglasi({super.key});
@@ -25,6 +25,7 @@ class _MojiOglasiState extends State<MojiOglasi> {
           .from('oglasi')
           .select('*, autor:profiles!oglasi_autor_id_fkey(puno_ime), obavljac:profiles!oglasi_obavljac_id_fkey(puno_ime)')
           .eq('autor_id', user.id)
+          .eq('je_aktivno', true)
           .order('created_at', ascending: false);
 
       final List data = response as List;
@@ -130,15 +131,20 @@ class _MojiOglasiState extends State<MojiOglasi> {
     }
   }
 
-  // --- LOGIKA: BRISANJE ---
-  Future<void> _obrisiOglas(String id) async {
-    try {
-      await supabase.from('oglasi').delete().eq('id', id);
-      setState(() {});
-    } catch (e) {
-      debugPrint("Greška pri brisanju: $e");
-    }
+ Future<void> _obrisiOglas(String id) async {
+  try {
+    // Umjesto .delete(), radimo .update() jer su podaci povezani s drugim tablicama (prijave, chat sobe, recenzije)
+    await supabase
+        .from('oglasi')
+        .update({'je_aktivno': false}) // Oglas ostaje u bazi, ali se "gasi"
+        .eq('id', id);
+
+    // Osvježi ekran (UI će se automatski ažurirati jer ga filtriramo u nastavku)
+    setState(() {}); 
+  } catch (e) {
+    debugPrint("Greška pri brisanju oglasa: $e");
   }
+}
 
   void _potvrdiBrisanje(Oglas oglas) {
     showDialog(
@@ -221,6 +227,9 @@ class _MojiOglasiState extends State<MojiOglasi> {
     bool mozeSeObrisati = !imaRadnika || jeZavrsen;
     bool mozeSeUrediti = !imaRadnika && !jeZavrsen;
 
+    // Dohvaćanje ikone kategorije iz dekor.dart
+    final ikonaKategorije = kategorijeSaIkonama[oglas.kategorija] ?? Icons.person_search;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
@@ -233,7 +242,34 @@ class _MojiOglasiState extends State<MojiOglasi> {
         children: [
           Row(
             children: [
-              Icon(jeZavrsen ? Icons.check_circle : (imaRadnika ? Icons.engineering : Icons.person_search), color: Colors.black87),
+              // DINAMIČKI PRIKAZ IKONE S MINI STATUS BADGE-OM
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  CircleAvatar(
+                    backgroundColor: Colors.white24,
+                    radius: 22,
+                    child: Icon(ikonaKategorije, color: Colors.black87, size: 24),
+                  ),
+                  if (jeZavrsen || imaRadnika)
+                    Positioned(
+                      bottom: -2,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          jeZavrsen ? Icons.check_circle : Icons.engineering,
+                          color: jeZavrsen ? Colors.grey[700] : Colors.orange[800],
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
               const SizedBox(width: 15),
               Expanded(
                 child: Column(

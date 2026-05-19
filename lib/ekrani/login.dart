@@ -15,6 +15,7 @@ class _LoginState extends State<login> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _passwordObscured = true; // DODANO: Stanje za sakrivanje/prikaz lozinke
 
   // Boje usklađene s Registracijom
   static const backgroundColor = Color(0xFFE5D9D6);
@@ -26,7 +27,7 @@ class _LoginState extends State<login> {
 
   // Funkcija za login na Supabase
   Future<void> _signIn() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+    if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Molimo unesite email i lozinku')),
       );
@@ -36,34 +37,47 @@ class _LoginState extends State<login> {
     setState(() => _isLoading = true);
 
     try {
-      await supabase.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+  await supabase.auth.signInWithPassword(
+    email: _emailController.text.trim(),
+    password: _passwordController.text.trim(),
+  );
 
-      if (mounted) {
-        // Nakon uspješnog logina, šaljemo korisnika na Home (odabir)
-        // pushReplacementNamed briše login iz povijesti tako da se ne može vratiti "nazad" na login
-        Navigator.pushReplacementNamed(context, '/ekrani/glavni_ekran');
-      }
-    } on AuthException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message), backgroundColor: Colors.red),
-        );
-      }
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Dogodila se neočekivana greška'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+  if (mounted) {
+    Navigator.pushReplacementNamed(context, '/ekrani/glavni_ekran');
+  }
+} on AuthApiException catch (error) {
+  // Specifično hvatanje API grešaka (poput "Invalid login credentials")
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error.message), 
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+} on AuthException catch (error) {
+  // Ostale općenite Supabase auth greške
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error.message), 
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+} catch (error) {
+  // Sve ostalo van okvira authentifikacije
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error.toString()),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+} finally {
+  if (mounted) setState(() => _isLoading = false);
+}
   }
 
   @override
@@ -108,10 +122,6 @@ class _LoginState extends State<login> {
                     alignment: Alignment.centerLeft,
                     child: Container(
                       margin: const EdgeInsets.only(top: 16),
-                      decoration: const BoxDecoration(
-                        color: Color.fromARGB(0, 0, 0, 0),
-                        shape: BoxShape.circle,
-                      ),
                       child: IconButton(
                         onPressed: () => Navigator.pop(context),
                         icon: const Icon(
@@ -165,8 +175,7 @@ class _LoginState extends State<login> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed:
-                          () {}, // Ovdje možeš dodati reset lozinke kasnije
+                      onPressed: () {}, // Ovdje ide reset lozinke kasnije
                       child: const Text(
                         'Zaboravili ste lozinku?',
                         style: TextStyle(color: darkBrownColor),
@@ -249,13 +258,28 @@ class _LoginState extends State<login> {
       ),
       child: TextField(
         controller: controller,
-        obscureText: isPassword,
+        // Ako je polje za lozinku, kontrolira se sakrivanje preko stanja _passwordObscured
+        obscureText: isPassword ? _passwordObscured : false,
         keyboardType: isEmail ? TextInputType.emailAddress : TextInputType.text,
         style: const TextStyle(color: textColor),
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: const TextStyle(color: hintTextColor),
           prefixIcon: Icon(icon, color: hintTextColor),
+          // POPRAVAK: Ako je lozinka, dodajemo interaktivno oko na kraj polja
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(
+                    _passwordObscured ? Icons.visibility_off : Icons.visibility,
+                    color: hintTextColor,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _passwordObscured = !_passwordObscured;
+                    });
+                  },
+                )
+              : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 24,
@@ -267,7 +291,6 @@ class _LoginState extends State<login> {
   }
 }
 
-// Painter za krugove (isti kao u Registraciji)
 class CirclePainter extends CustomPainter {
   final Color color;
   CirclePainter({required this.color});

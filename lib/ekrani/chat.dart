@@ -32,7 +32,16 @@ class _ChatIndividualniState extends State<ChatIndividualni> {
   final _porukaController = TextEditingController();
   final supabase = Supabase.instance.client;
   late final String mojId;
-
+Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
+  // Ovo je identična logika kao u Oglas.fromJson
+  final data = await supabase
+      .from('profiles')
+      .select('puno_ime') // Dohvaćamo samo ono što nam treba
+      .eq('id', widget.sugovornikId)
+      .maybeSingle();
+      
+  return data ?? {'puno_ime': 'Nepoznati korisnik'};
+}
   @override
   void initState() {
     mojId = supabase.auth.currentUser!.id;
@@ -130,35 +139,54 @@ class _ChatIndividualniState extends State<ChatIndividualni> {
     );
   }
 
-  Widget _buildAppBarTitle() {
-    return Row(
-      children: [
-        IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22)),
-        GestureDetector(
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => KorisnickiProfil(prikazaniKorisnikId: widget.sugovornikId))),
-          child: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.person_outline, color: Colors.black)),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(widget.imeSugovornika, style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              GestureDetector(
-                onTap: _navigirajNaOglas,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: const Color(0xFF8F6E68), borderRadius: BorderRadius.circular(15)),
-                  child: Text(widget.naslovOglasa, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+ Widget _buildAppBarTitle() {
+  return Row(
+    children: [
+      IconButton(
+        onPressed: () => Navigator.pop(context), 
+        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22)
+      ),
+      GestureDetector(
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => KorisnickiProfil(prikazaniKorisnikId: widget.sugovornikId))),
+        child: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.person_outline, color: Colors.black)),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- OVDJE DOHVAĆAMO IME IZ BAZE ---
+            FutureBuilder<Map<String, dynamic>>(
+              future: _dohvatiPodatkeSugovornika(),
+              builder: (context, snapshot) {
+                // Dok se učitava, prikaži ime iz widgeta (da ne bude prazno)
+                final ime = snapshot.hasData ? snapshot.data!['puno_ime'] : widget.imeSugovornika;
+                
+                return Text(
+                  ime, 
+                  style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                );
+              },
+            ),
+            const SizedBox(height: 6),
+            GestureDetector(
+              onTap: _navigirajNaOglas,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: const Color(0xFF8F6E68), borderRadius: BorderRadius.circular(15)),
+                child: Text(
+                  widget.naslovOglasa, 
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   Widget _buildMessagesStream() {
     return StreamBuilder<List<Map<String, dynamic>>>(

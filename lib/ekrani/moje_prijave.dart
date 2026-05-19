@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/ekrani/glavni_ekran.dart';
-import '../dekor.dart';
+import '../dekor.dart'; // Ovdje se nalazi naša zajednička mapa kategorijeSaIkonama
 import 'oglas.dart';
 
 class Prijava {
@@ -39,8 +39,7 @@ class MojePrijaveEkran extends StatefulWidget {
 class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
   final supabase = Supabase.instance.client;
 
-  // 1. DOHVAĆANJE PRIJAVA
-  // 1. DOHVAĆANJE PRIJAVA S ISPRAVNIM ALIASIMA
+  // 1. DOHVAĆANJE PRIJAVA BEZ ALIJASA (Tako da Oglas.fromJson sve uredno prepozna)
   Future<List<Prijava>> _dohvatiMojePrijave() async {
     final user = supabase.auth.currentUser;
     if (user == null) return [];
@@ -52,11 +51,12 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
             *,
             oglasi:oglas_id (
               id,
-              naslov:naslov_oglasa,   
-              opis:opis_oglasa,       
-              isplata:isplata_oglasa, 
-              adresa:adresa_oglasa,   
-              status:status_oglasa,   
+              naslov_oglasa,   
+              opis_oglasa,       
+              isplata_oglasa, 
+              adresa_oglasa,   
+              status_oglasa,   
+              kategorija,       
               autor_id,
               obavljac_id,
               created_at
@@ -75,7 +75,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
 
   // 2. LOGIKA ZA OCJENJIVANJE I BRISANJE PRIJAVE
   Future<void> _spremiRecenzijuAutora({
-    required Prijava prijava, // Šaljemo cijelu prijavu
+    required Prijava prijava,
     required int ocjena,
     String? komentar,
   }) async {
@@ -121,7 +121,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
     }
   }
 
-  // DIJALOG ZA OCJENU - Sada prima 'prijava' objekt
+  // DIJALOG ZA OCJENU - Prima 'prijava' objekt
   void _pokaziDijalogZaOcjenuAutora(Prijava prijava) {
     int odabranaOcjena = 5;
     final komentarController = TextEditingController();
@@ -203,9 +203,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
       await supabase.from('prijave').delete().eq('id', prijavaId);
 
       if (mounted) {
-        // 1. Osvježavamo trenutni ekran (npr. listu tvojih prijava)
         setState(() {});
-
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Prijava otkazana')));
@@ -222,9 +220,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
     const cardColor = Color(0xFF8F6E68);
 
     return Scaffold(
-      // 1. Postavljamo pozadinu na Scaffold
       backgroundColor: bgColor,
-      // Dopušta krugovima da se vide i iza AppBara
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
@@ -235,7 +231,6 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
         elevation: 0,
         iconTheme: const IconThemeData(color: darkBrown),
       ),
-      // 2. Body omotamo u PozadinaKrugovi
       body: PozadinaKrugovi(
         child: SafeArea(
           child: FutureBuilder<List<Prijava>>(
@@ -274,6 +269,9 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                   bool zaposlenSam = oglas.obavljacId == user?.id;
                   bool jeZavrseno = oglas.status == 'obavljen';
 
+                  // Ovdje izvlačimo ikonicu specifičnu za vrstu posla
+                  final ikonaPosla = kategorijeSaIkonama[oglas.kategorija] ?? Icons.hourglass_top;
+
                   return Container(
                     margin: const EdgeInsets.only(bottom: 15),
                     decoration: BoxDecoration(
@@ -300,7 +298,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                               ? Icons.done_all
                               : (zaposlenSam
                                     ? Icons.celebration
-                                    : Icons.hourglass_top),
+                                    : ikonaPosla), // Dinamička ikona umjesto fiksnog pješčanog sata
                           color: Colors.white,
                         ),
                       ),
@@ -387,7 +385,6 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                       .maybeSingle();
 
                   if (data != null) {
-                    // ELEGANTNO: Samo "kopiramo" oglas s novim imenom
                     oglasZaPrikaz = oglasZaPrikaz.copyWith(
                       autorIme: data['puno_ime'],
                     );

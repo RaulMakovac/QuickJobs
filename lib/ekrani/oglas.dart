@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../dekor.dart';
 import '/ekrani/korisnicki_profil.dart';
 
+
+
 class DetaljiOglasa extends StatelessWidget {
   final Oglas oglas;
   final bool samoPregled;
@@ -11,12 +13,14 @@ class DetaljiOglasa extends StatelessWidget {
   const DetaljiOglasa({
     super.key,
     required this.oglas,
-    this.samoPregled = false, // Default je false da se gumb vidi na glavnom ekranu
+    this.samoPregled = false, 
   });
 
   static const bgColor = Color(0xFFE5D9D6);
   static const darkBrown = Color(0xFF4A2C29);
   static const cardColor = Color(0xFF8F6E68);
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +38,10 @@ class DetaljiOglasa extends StatelessWidget {
                 const SizedBox(height: 35),
                 _buildJobTitleHeader(),
                 
+                // Prikaz odabrane kategorije posla ispod naslova
+                const SizedBox(height: 15),
+                _buildKategorijaBadge(),
+                
                 // --- KONTROLIRANI RAZMAK I BANER ---
                 if (oglas.jeReportan) ...[
                   const SizedBox(height: 25),
@@ -41,7 +49,7 @@ class DetaljiOglasa extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.red[50]!.withOpacity(0.85), // Svjetlija pozadina koja odskače
+                      color: Colors.red[50]!.withOpacity(0.85),
                       border: Border.all(color: Colors.redAccent, width: 1.5),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: const [
@@ -49,7 +57,7 @@ class DetaljiOglasa extends StatelessWidget {
                       ],
                     ),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start, // Ikona ostaje gore ako je tekst dug
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Icon(
                           Icons.gavel_rounded,
@@ -86,14 +94,14 @@ class DetaljiOglasa extends StatelessWidget {
                   ),
                 ],
 
-                const SizedBox(height: 25), // Ujednačen razmak prije autora
+                const SizedBox(height: 25),
                 _buildAuthorSection(context),
 
-                const SizedBox(height: 25), // Ujednačen razmak prije detalja
-                _buildDetailRow('Adresa: ${oglas.adresa}'),
+                const SizedBox(height: 25),
+                _buildDetailRow('Adresa: ${oglas.adresa}', Icons.location_on_rounded),
                 const SizedBox(height: 12),
-                _buildDetailRow('Isplata: ${oglas.isplata}€'),
-                
+                _buildDetailRow('Isplata: ${oglas.isplata}€', Icons.euro_rounded),
+
                 const SizedBox(height: 25),
                 _buildDescriptionCard(),
 
@@ -125,7 +133,38 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  // --- SEKCIJA AUTORA (Uređena u obliku čiste kartice) ---
+  // --- BADGE INDIKATOR KATEGORIJE ---
+  Widget _buildKategorijaBadge() {
+    // Korištenje polja oglas.kategorija koje smo definirali u novom Oglas modelu na glavnom ekranu
+    final nazivKategorije = oglas.kategorija;
+    final ikonaKategorije = kategorijeSaIkonama[nazivKategorije] ?? Icons.more_horiz_rounded;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: darkBrown.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: darkBrown.withOpacity(0.15), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(ikonaKategorije, color: darkBrown, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            nazivKategorije,
+            style: const TextStyle(
+              color: darkBrown,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- SEKCIJA AUTORA ---
   Widget _buildAuthorSection(BuildContext context) {
     return GestureDetector(
       onTap: () {
@@ -145,7 +184,7 @@ class DetaljiOglasa extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: cardColor.withOpacity(0.15), // Blago prozirna smeđa podloga koja odgovara dizajnu
+          color: cardColor.withOpacity(0.15),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: cardColor.withOpacity(0.3), width: 1),
         ),
@@ -190,7 +229,7 @@ class DetaljiOglasa extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: darkBrown, size: 18), // Mali indikator da se može kliknuti
+            const Icon(Icons.arrow_forward_ios_rounded, color: darkBrown, size: 18),
           ],
         ),
       ),
@@ -229,7 +268,6 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  // --- LOGIKA PRIJAVE NA POSAO ---
   Future<void> _handlePrijava(BuildContext context) async {
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
@@ -260,7 +298,6 @@ class DetaljiOglasa extends StatelessWidget {
     }
   }
 
-  // --- POMOĆNI DIZAJN ---
   Widget _buildAppBar(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -290,7 +327,7 @@ class DetaljiOglasa extends StatelessWidget {
 
   Widget _buildJobTitleHeader() {
     return Container(
-      width: double.infinity, // Raširi naslov preko cijele širine radi simetrije
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
       decoration: BoxDecoration(
         color: darkBrown,
@@ -356,7 +393,8 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String text) {
+ // Dodali smo 'icon' parametar
+  Widget _buildDetailRow(String text, IconData icon) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -364,18 +402,25 @@ class DetaljiOglasa extends StatelessWidget {
         color: cardColor.withOpacity(0.85),
         borderRadius: BorderRadius.circular(15),
       ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-          fontSize: 15,
-        ),
+      child: Row( // Koristimo Row da stavimo ikonu i tekst zajedno
+        children: [
+          Icon(icon, color: Colors.white, size: 20),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // --- POP-UP DIJALOG ZA REPORT OGLASA ---
   void _prikaziDijalogZaPrijavuOglasa(BuildContext context, String oglasId) {
     String odabraniRazlog = "Scam / Prijevara";
     final komentarController = TextEditingController();
@@ -458,8 +503,8 @@ class DetaljiOglasa extends StatelessWidget {
                   });
 
                   if (context.mounted) {
-                    Navigator.pop(context); // Zatvori dijalog
-                    Navigator.pop(context); // Vrati korisnika na listu
+                    Navigator.pop(context);
+                    Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text("Oglas prijavljen. Hvala na povratnoj informaciji!"),

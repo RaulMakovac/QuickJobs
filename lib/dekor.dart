@@ -65,3 +65,11 @@ class _CirclePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+// Dodaj ovo na dno datoteke dekor.dart
+final Map<String, IconData> kategorijeSaIkonama = {
+    "Fizički poslovi": Icons.construction_rounded,
+    "Pet/Babysitting": Icons.child_care_rounded,
+    "Jednostavne usluge": Icons.volunteer_activism_rounded,
+    "Instrukcije": Icons.school_rounded,
+    "Ostalo": Icons.more_horiz_rounded,
+  };

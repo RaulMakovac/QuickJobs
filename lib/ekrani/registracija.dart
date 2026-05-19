@@ -20,7 +20,6 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
   final _lozinkaController = TextEditingController();
 
   bool _prihvacamUvjete = false;
-  bool _omoguciGps = false;
   bool _isLoading = false;
 
   // Boje usklađene s dizajnom
@@ -201,14 +200,7 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
                       setState(() => _prihvacamUvjete = value!);
                     }, isLegal: true),
 
-                    // OBIČAN CHECKBOX ZA GPS
-                    _buildCheckbox(
-                      'Omogući korištenje GPS usluga',
-                      _omoguciGps,
-                      (value) {
-                        setState(() => _omoguciGps = value!);
-                      },
-                    ),
+                    
 
                     const SizedBox(height: 40),
 

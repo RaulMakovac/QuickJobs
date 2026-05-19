@@ -18,7 +18,11 @@ import 'ekrani/jednostavni_ekran.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    bool isOverflowError = details.toString().contains('Bottom overflowed');
+    if (isOverflowError) return const SizedBox.shrink(); // Sakrij samo overflow
+    return ErrorWidget(details.exception); // Pokaži ostale greške
+  };
   // Učitavanje .env datoteke
   await dotenv.load(fileName: ".env");
   // Inicijalizacija Supabasea koristeći dotenv
