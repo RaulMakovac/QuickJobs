@@ -48,7 +48,7 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
     super.initState();
   }
 
-  // --- LOGIKA ZA NAVIGACIJU NA OGLAS ---
+  // --- LOGIKA ZA NAVIGACIJU NA OGLAS UNUTAR CHATA ---
   Future<void> _navigirajNaOglas() async {
     try {
       final res = await supabase.from('oglasi').select().eq('id', widget.oglasId).maybeSingle();
@@ -73,7 +73,7 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Greška: $e")));
     }
   }
-
+//nakon gotovog posla, korisnik može odmah obrisati chat, bez čekanja 30 dana kad se automatski briše (supabase trigger)
   Future<void> _obrisiChatOdmah() async {
     final potvrda = await showDialog<bool>(
       context: context,
@@ -94,11 +94,11 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
 
   @override
   Widget build(BuildContext context) {
-    // KLJUČNA PROMJENA: Slušamo promjene na ovoj specifičnoj sobi u realnom vremenu
+    // status sobe pratimo direktno iz baze, jer se može promijeniti (arhivirati) i dok je korisnik u chatu, pa tako odmah reagiramo na tu promjenu
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: supabase.from('chat_sobe').stream(primaryKey: ['id']).eq('id', widget.sobaId),
       builder: (context, snapshot) {
-        // Provjeravamo status iz baze, ako stream još nije povukao podatke koristimo početni widget.jeArhiviran
+        // Provjeravamo status iz baze, ako stream još nije povukao podatke koristi se početni widget.jeArhiviran
         bool arhiviranIzBaze = widget.jeArhiviran;
         if (snapshot.hasData && snapshot.data!.isNotEmpty) {
           arhiviranIzBaze = snapshot.data!.first['status'] == 'arhivirano';
@@ -129,7 +129,7 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
                     child: _buildMessagesStream(),
                   ),
                 ),
-                // Ako je arhiviran, prikaži banner, inače input polje
+                // Ako je arhiviran, prikaži banner arhiviranosti, inače input polje
                 arhiviranIzBaze ? _buildArhiviranBanner() : _buildInputArea(arhiviranIzBaze),
               ],
             ),
@@ -155,11 +155,11 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- OVDJE DOHVAĆAMO IME IZ BAZE ---
+            // --- OVDJE DOHVAĆAM IME IZ BAZE ---
             FutureBuilder<Map<String, dynamic>>(
               future: _dohvatiPodatkeSugovornika(),
               builder: (context, snapshot) {
-                // Dok se učitava, prikaži ime iz widgeta (da ne bude prazno)
+                // Dok se učitava, prikaži ime iz widgeta (da ne bude prazno) nitpick ali izgledalo mi je ružno bez ovog
                 final ime = snapshot.hasData ? snapshot.data!['puno_ime'] : widget.imeSugovornika;
                 
                 return Text(

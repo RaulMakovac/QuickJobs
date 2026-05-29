@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../dekor.dart'; // Uvezi tvoj CirclePainter ili PozadinaKrugovi
+import '../dekor.dart'; 
 import '/ekrani/glavni_ekran.dart';
 
 class AzurirajOglas extends StatefulWidget {
@@ -55,6 +55,8 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
       );
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +131,7 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
 
                       const SizedBox(height: 40),
 
-                      // GUMB ZA SPREMANJE (Vizualno istaknut)
+                      // GUMB ZA SPREMANJE PROMJENA
                       GestureDetector(
                         onTap: _updateOglas,
                         child: Column(
@@ -199,7 +201,6 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
                   ),
                 ),
                 Text(
-                  // Dodavanje navodnika oko naslova
                   '"$naslovPosla"',
                   textAlign: TextAlign.center,
                   maxLines: 2,
@@ -210,7 +211,7 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
                     fontWeight: FontWeight.bold,
                     color: boja,
                     fontStyle: FontStyle
-                        .italic, // Navodnici često izgledaju bolje u italic verziji
+                        .italic, // Navodnici izgledaju bolje u italic verziji IMHO
                   ),
                 ),
               ],
@@ -223,7 +224,7 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
   }
 
   Widget _buildInputField(
-    String labela, // Dodano za naslov iznad polja
+    String labela,
     TextEditingController controller,
     IconData icon,
     Color boja, {

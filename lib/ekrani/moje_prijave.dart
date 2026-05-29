@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/ekrani/glavni_ekran.dart';
-import '../dekor.dart'; // Ovdje se nalazi naša zajednička mapa kategorijeSaIkonama
+import '../dekor.dart'; 
 import 'oglas.dart';
 
 class Prijava {
@@ -23,7 +23,7 @@ class Prijava {
       oglasId: json['oglas_id'],
       oglas: Oglas.fromJson(
         json['oglasi'],
-      ), // 'oglasi' jer radimo join u selectu
+      ), // 'oglasi' jer radi join u selectu
       createdAt: DateTime.parse(json['created_at']),
     );
   }
@@ -39,7 +39,7 @@ class MojePrijaveEkran extends StatefulWidget {
 class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
   final supabase = Supabase.instance.client;
 
-  // 1. DOHVAĆANJE PRIJAVA BEZ ALIJASA (Tako da Oglas.fromJson sve uredno prepozna)
+  // 1. DOHVAĆANJE PRIJAVA BEZ ALIASA (Tako da Oglas.fromJson sve uredno prepozna)
   Future<List<Prijava>> _dohvatiMojePrijave() async {
     final user = supabase.auth.currentUser;
     if (user == null) return [];
@@ -73,7 +73,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
     }
   }
 
-  // 2. LOGIKA ZA OCJENJIVANJE I BRISANJE PRIJAVE
+  // 2. LOGIKA ZA OCJENJIVANJE I BRISANJE PRIJAVE ilitiga ROMPICOGLIONI JER JE SVE POVEZANO DOSL
   Future<void> _spremiRecenzijuAutora({
     required Prijava prijava,
     required int ocjena,
@@ -103,7 +103,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
       await supabase.from('prijave').delete().eq('id', prijava.id);
 
       if (mounted) {
-        setState(() {}); // Osvježi listu (prijava nestaje)
+        setState(() {}); // Osvježi listu (prijava nestaje [NADAJMO SE])
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.green,

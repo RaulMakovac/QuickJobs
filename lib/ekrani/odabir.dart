@@ -4,7 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 class odabir extends StatelessWidget {
   const odabir({super.key});
 
-  // Boje usklađene s ostatkom aplikacije
+  
   static const backgroundColor = Color(0xFFE5D9D6);
   static const circleColor = Color(0xFFD6C8C5);
   static const darkBrownColor = Color(0xFF6D3F3A);
@@ -27,7 +27,6 @@ class odabir extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
                 children: [
-                  // Gumb natrag
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Container(
@@ -77,7 +76,6 @@ class odabir extends StatelessWidget {
                         title: 'Tražim radnika',
                         svgPath: 'assets/images/trazim_radnika.svg',
                         onTap: () {
-                          // Vodi na novi ekran s oglasima
                           Navigator.pushNamed(context, '/ekrani/jednostavni_ekran');
                         },
                       ),
@@ -101,7 +99,7 @@ class odabir extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 20.0),
                     child: SvgPicture.asset(
-                      'assets/images/upitnik.svg', // <-- OVDJE UBACI DONJI SVG
+                      'assets/images/upitnik.svg', 
                       height: 180,
                       placeholderBuilder: (context) => const SizedBox(
                         height: 180,
@@ -124,7 +122,7 @@ class odabir extends StatelessWidget {
     );
   }
 
-  // Funkcija za izgradnju pojedinačne kartice (Role Card)
+  // Funkcija za izgradnju pojedinačne kartice 
   Widget _buildRoleCard(
     BuildContext context, {
     required String title,
@@ -156,7 +154,6 @@ class odabir extends StatelessWidget {
               child: SvgPicture.asset(
                 svgPath,
                 fit: BoxFit.contain,
-                // Placeholder dok ne ubaciš prave fileove da ti se ne ruši app
                 placeholderBuilder: (context) => Container(
                   color: backgroundColor,
                   child: const Icon(

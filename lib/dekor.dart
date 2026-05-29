@@ -7,7 +7,7 @@ class PozadinaKrugovi extends StatelessWidget {
   const PozadinaKrugovi({
     super.key,
     required this.child,
-    this.krugBoja = const Color(0xFFD6C8C5), // Defaultna boja koju koristiš
+    this.krugBoja = const Color(0xFFD6C8C5),
   });
 
   @override
@@ -65,7 +65,7 @@ class _CirclePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-// Dodaj ovo na dno datoteke dekor.dart
+// Mapa kategorija i njihovih ikona za oglase
 final Map<String, IconData> kategorijeSaIkonama = {
     "Fizički poslovi": Icons.construction_rounded,
     "Pet/Babysitting": Icons.child_care_rounded,

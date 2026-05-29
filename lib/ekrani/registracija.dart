@@ -279,7 +279,7 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
     );
   }
 
-  // MODIFICIRANI CHECKBOX S PODRŠKOM ZA KLIKABILNI TEKST
+  // MODIFICIRANI CHECKBOX S PODRŠKOM ZA KLIKABILNI TEKST UVJETA
   Widget _buildCheckbox(
     String title,
     bool value,

@@ -42,7 +42,7 @@ class DetaljiOglasa extends StatelessWidget {
                 const SizedBox(height: 15),
                 _buildKategorijaBadge(),
                 
-                // --- KONTROLIRANI RAZMAK I BANER ---
+                // --- KONTROLIRANI RAZMAK I BANNER ---
                 if (oglas.jeReportan) ...[
                   const SizedBox(height: 25),
                   Container(
@@ -135,7 +135,6 @@ class DetaljiOglasa extends StatelessWidget {
 
   // --- BADGE INDIKATOR KATEGORIJE ---
   Widget _buildKategorijaBadge() {
-    // Korištenje polja oglas.kategorija koje smo definirali u novom Oglas modelu na glavnom ekranu
     final nazivKategorije = oglas.kategorija;
     final ikonaKategorije = kategorijeSaIkonama[nazivKategorije] ?? Icons.more_horiz_rounded;
 
@@ -236,7 +235,7 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  // --- GUMB ZA PRIJAVU ---
+  // --- GUMB ZA PRIJAVU NA OGLAS---
   Widget _buildApplyButton(BuildContext context) {
     return Column(
       children: [
@@ -393,7 +392,7 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
- // Dodali smo 'icon' parametar
+
   Widget _buildDetailRow(String text, IconData icon) {
     return Container(
       width: double.infinity,
@@ -402,7 +401,7 @@ class DetaljiOglasa extends StatelessWidget {
         color: cardColor.withOpacity(0.85),
         borderRadius: BorderRadius.circular(15),
       ),
-      child: Row( // Koristimo Row da stavimo ikonu i tekst zajedno
+      child: Row( 
         children: [
           Icon(icon, color: Colors.white, size: 20),
           const SizedBox(width: 15),

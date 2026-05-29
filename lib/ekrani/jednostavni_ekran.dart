@@ -41,7 +41,6 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
             child: Column(
               children: [
                 const SizedBox(height: 30),
-                // LOGO SEKCIJA (Gornji dio ekrana)
                 _buildLogo(tamnoSmedja),
                 
                 // SREDIŠNJI DIO - Sve je centrirano i nema skrolanja
@@ -49,14 +48,13 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // 2x2 Grid za osnovne opcije
                       GridView.count(
                         shrinkWrap: true, // Omogućuje gridu da zauzme samo onoliko mjesta koliko mu treba
                         physics: const NeverScrollableScrollPhysics(), // GASI SCROLLANJE
                         crossAxisCount: 2,
                         mainAxisSpacing: 20,
                         crossAxisSpacing: 20,
-                        childAspectRatio: 1.1, // Blago pravokutni oblik za moderniji izgled
+                        childAspectRatio: 1.1, 
                         children: [
                           _buildVelikaTipka(
                             context,
@@ -95,7 +93,7 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
                       
                       const SizedBox(height: 20),
                       
-                      // RESTRUKTURIRANI GUMB: Široka, istaknuta kartica za dodavanje oglasa
+                      
                       _buildGlavniDodajOglasGumb(context, tamnoSmedja),
                     ],
                   ),
@@ -112,10 +110,9 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
 Widget _buildLogo(Color boja) {
   return Column(
     children: [
-      // Prikaz tvog novog SVG logotipa iz Figme
       SvgPicture.asset(
-        'assets/images/QJ_Logo.svg', // Putanja do datoteke koju si definirao u pubspec.yaml
-        width: 100,             // Prilagodi veličinu (visinu i širinu) po želji
+        'assets/images/QJ_Logo.svg', 
+        width: 100,             
         height: 100,
         
         

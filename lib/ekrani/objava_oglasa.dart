@@ -15,13 +15,12 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
   final _isplataController = TextEditingController();
   final _opisController = TextEditingController();
 
-  String _odabranaKategorija = "Ostalo"; //default
+  String _odabranaKategorija = "Ostalo"; // Početna kategorija
 
 
   bool _isLoading = false;
   final supabase = Supabase.instance.client;
 
-  // Glavne boje projekta
   static const bgColor = Color(0xFFE5D9D6);
   static const fieldColor = Color(0xFFD1BDB9);
   static const darkFieldColor = Color(0xFF8F6E68);
@@ -84,7 +83,6 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
             padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
             child: Column(
               children: [
-                // Back gumb i naslov
                 Row(
                   children: [
                     IconButton(
@@ -104,7 +102,7 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 40), // Balans za back button
+                    const SizedBox(width: 40), 
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -115,7 +113,7 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                 ),
                 const SizedBox(height: 30),
 
-                // Slika i Naziv (Redak)
+                // Slika (ZA DODAT FUNKCIONALNOST) i Naziv (Redak)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -201,12 +199,12 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                               kategorijeSaIkonama[kategorija],
                               color: const Color(
                                 0xFF4A2C29,
-                              ), // Tvoja standardna tamnosmeđa boja
+                              ), 
                               size: 22,
                             ),
                             const SizedBox(
                               width: 12,
-                            ), // Razmak između ikonice i teksta
+                            ), 
                             Text(kategorija),
                           ],
                         ),

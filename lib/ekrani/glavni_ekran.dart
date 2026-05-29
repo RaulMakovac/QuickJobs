@@ -216,7 +216,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
                 delegate: _StickySearchDelegate(
                   visina: _prikaziFiltere
                       ? 265
-                      : 80, // Malo povećana visina radi boljeg layouta
+                      : 80,
                   child: Container(
                     decoration: BoxDecoration(
                       color: _prikaziFiltere
@@ -334,7 +334,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
     );
   }
 
-  // FIKSIRANO: Korištenjem OverflowBox-a i micanjem paddinga u nulu rješavamo kompletno "9.0 pixels bottom overflow"
+  // FIKSIRANO: Korištenjem OverflowBox-a i AnimatedOpacity-a, panel se može vizualno proširiti i sakriti bez da stvarno mijenja svoju veličinu u layoutu, što sprječava overflow greške
   Widget _buildFilterPanel() {
     List<String> stavkeKategorija = [
       "Sve kategorije",
@@ -355,7 +355,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
         opacity: _prikaziFiltere ? 1.0 : 0.0,
         // OverflowBox dopušta elementima da zadrže svoju veličinu dok se kontejner skuplja u nulu
         child: OverflowBox(
-          maxHeight: 170,
+          maxHeight: 170, //PROMJENIIIII
           alignment: Alignment.topCenter,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,7 +366,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
                   const Text(
                     "Min. isplata",
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.bold, 
                       color: darkBrown,
                     ),
                   ),
@@ -623,3 +623,5 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
     return oldDelegate.visina != visina;
   }
 }
+
+

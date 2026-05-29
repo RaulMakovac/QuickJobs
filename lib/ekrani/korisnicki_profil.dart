@@ -47,9 +47,7 @@ class Recenzija {
 
 class KorisnickiProfil extends StatefulWidget {
   final String? prikazaniKorisnikId;
-
   const KorisnickiProfil({super.key, this.prikazaniKorisnikId});
-
   @override
   State<KorisnickiProfil> createState() => _KorisnickiProfilState();
 }
@@ -80,7 +78,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
   bool _isLoading = true;
   bool _prikaziSveRecenzije = false;
   double _prosjecnaOcjena = 0.0;
-  String _tekstOcjene = "";
+  String _tekstOcjene = ""; //ne znam zašto piše da se ne koristi doslovno se koristi u buildu al whatever
   List<Oglas> _mojiOglasi = [];
   List<Recenzija> _recenzije = [];
 
@@ -226,7 +224,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
         Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
     }
   }
-
+//dok se loada je prazno
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -331,8 +329,6 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
 
                         _buildUserHeader(),
                         const SizedBox(height: 25),
-
-                        // Dodane pripadajuće ikonice uz polja
                         _buildEditableField(
                           "Ime i prezime:",
                           _imeController,
@@ -397,8 +393,6 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
             ),
           ),
           const SizedBox(height: 4),
-          
-          // OVDJE JE PROMJENA
           _prosjecnaOcjena > 0 
             ? Row(
                 children: [
@@ -457,7 +451,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                   ikona,
                   color: Colors.white,
                   size: 14,
-                ), // Prikaz ikone uz naslov polja
+                ), 
                 const SizedBox(width: 6),
                 Text(
                   label,
@@ -587,7 +581,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
             itemCount: _mojiOglasi.length,
             itemBuilder: (context, index) {
               final oglas = _mojiOglasi[index];
-              // POPRAVAK: Izvlačimo pravu ikonu za posao iz dekor.dart mape
+              // POPRAVAK kategorije se prikazuju kao ikone umjesto generičke ikone posla
               final ikonaOglasa =
                   kategorijeSaIkonama[oglas.kategorija] ?? Icons.work_outline;
 
@@ -682,7 +676,6 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
   }
 
   Widget _buildRecenzijaCard(Recenzija r) {
-    // POPRAVAK: Izvlačimo ikonu kategorije posla koji je ocijenjen
     final ikonaPosla =
         kategorijeSaIkonama[r.oglasKategorija] ?? Icons.work_outline;
 
@@ -722,7 +715,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
             ],
           ),
           const SizedBox(height: 4),
-          // Dodana ikonica tik uz naziv posla unutar recenzije
+          // Dodana ikonica tick uz naziv posla unutar recenzije
           Row(
             children: [
               Icon(ikonaPosla, color: Colors.white60, size: 14),
@@ -756,7 +749,8 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
   void _prikaziDijalogZaReportProfila(BuildContext context, String korisnikId) {
     String privremeniRazlog = "Scam / Neisplata";
     final komentarController = TextEditingController();
-
+//gumb za prijavu AKO su korisnici surađivali na obavljenom poslu onda se može reportati, inače ne, to provjeravamo u appbaru i ako se može reportati onda se prikaže ikona zastavice koja otvara ovaj dijalog
+//good grief take it to a publisher :skull:
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(

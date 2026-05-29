@@ -13,7 +13,6 @@ class MojiPosloviHub extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 1. Zadržavamo normalnu boju pozadine Scaffold-a
       backgroundColor: bgColor,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -30,7 +29,6 @@ class MojiPosloviHub extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      // 2. Ovdje ubacujemo krugove kao bazu za body
       body: PozadinaKrugovi(
         child: SafeArea(
           child: Padding(

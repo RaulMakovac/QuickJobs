@@ -3,7 +3,7 @@ import 'package:quickjobs/ekrani/azuriraj_oglas.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/ekrani/glavni_ekran.dart';
 import 'zaposli.dart';
-import '../dekor.dart'; // Ovdje se nalazi naša zajednička mapa kategorijeSaIkonama
+import '../dekor.dart'; 
 
 class MojiOglasi extends StatefulWidget {
   const MojiOglasi({super.key});
@@ -15,7 +15,7 @@ class MojiOglasi extends StatefulWidget {
 class _MojiOglasiState extends State<MojiOglasi> {
   final supabase = Supabase.instance.client;
 
-  // --- LOGIKA: DOHVAĆANJE I SORTIRANJE (Gotovi idu na dno) ---
+  // LOGIKA: DOHVAĆANJE I SORTIRANJE (Gotovi idu na dno)
   Future<List<Oglas>> dohvatiMojeOglase() async {
     final user = supabase.auth.currentUser;
     if (user == null) return [];
@@ -45,7 +45,7 @@ class _MojiOglasiState extends State<MojiOglasi> {
     }
   }
 
-  // --- LOGIKA: DIJALOG ZA OCJENJIVANJE (POPRAVLJEN OVERFLOW) ---
+  //LOGIKA: DIJALOG ZA OCJENJIVANJE (slično kao u MojePrijave, ali s ocjenom za obavljača, da se optimizirat)
   void _pokaziDijalogZaOcjenu(Oglas oglas) {
     int odabranaOcjena = 5;
     final komentarController = TextEditingController();
@@ -133,13 +133,13 @@ class _MojiOglasiState extends State<MojiOglasi> {
 
  Future<void> _obrisiOglas(String id) async {
   try {
-    // Umjesto .delete(), radimo .update() jer su podaci povezani s drugim tablicama (prijave, chat sobe, recenzije)
+    // Umjesto .delete(), radimo .update() jer su podaci povezani s drugim tablicama (prijave, chat sobe, recenzije) (NAUČIENO NA TEŽI NAČIN)
     await supabase
         .from('oglasi')
         .update({'je_aktivno': false}) // Oglas ostaje u bazi, ali se "gasi"
         .eq('id', id);
 
-    // Osvježi ekran (UI će se automatski ažurirati jer ga filtriramo u nastavku)
+    // Osvježi ekran
     setState(() {}); 
   } catch (e) {
     debugPrint("Greška pri brisanju oglasa: $e");
@@ -227,7 +227,7 @@ class _MojiOglasiState extends State<MojiOglasi> {
     bool mozeSeObrisati = !imaRadnika || jeZavrsen;
     bool mozeSeUrediti = !imaRadnika && !jeZavrsen;
 
-    // Dohvaćanje ikone kategorije iz dekor.dart
+   
     final ikonaKategorije = kategorijeSaIkonama[oglas.kategorija] ?? Icons.person_search;
 
     return Container(
@@ -301,7 +301,7 @@ class _MojiOglasiState extends State<MojiOglasi> {
                     ),
                 ],
               ),
-              if (!jeZavrsen)
+              if (!jeZavrsen) //LOGIKA ZA BRISANJE OGLASA: SAMO AKTIVNI OGLASI KOJI NEMAJU RADNIKA MOGU SE OBRISATI, A TO JE VEĆ OGRANIČENO PRIKAZOM GUMBA ZA BRISANJE
                 ElevatedButton(
                   onPressed: () async {
                     if (imaRadnika) {

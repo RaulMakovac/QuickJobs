@@ -57,12 +57,10 @@ class PostavkeEkran extends StatelessWidget {
   try {
     final user = supabase.auth.currentUser;
     if (user == null) return;
-
     final userId = user.id; // Spremi ID prije odjave
-    //briši korisnika pozivom funkcije iz supabasea
     await supabase.rpc('potpuno_obrisi_korisnika');
-    // 1. Prvo napravi signOut da očistiš lokalne tokene i sesiju u aplikaciji
-   
+    //Prvo napravi signOut da očistiš lokalne tokene i sesiju u aplikaciji
+    await supabase.auth.signOut();
     await supabase.from('profiles').delete().eq('id', userId);
 
     if (context.mounted) {
@@ -103,7 +101,7 @@ class PostavkeEkran extends StatelessWidget {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
                   children: [
-                    // PRVA GRUPA: Općenito i način rada
+                    // PRVA GRUPA: Općenito i način rada sa jednostavnog na standardni i obrnuto
                     _buildPostavkeGrupa([
                       _PostavkaItem(
                         ikona: dolaziIzJednostavnog 
@@ -139,7 +137,7 @@ class PostavkeEkran extends StatelessWidget {
                           );
                         },
                       ),
-                      // Zamijenjena odjava s brisanjem računa
+                      // brisanje računa
                       _PostavkaItem(
                         ikona: Icons.delete_forever_rounded,
                         naslov: "Obriši moj račun",
@@ -152,7 +150,7 @@ class PostavkeEkran extends StatelessWidget {
 
                     const SizedBox(height: 25),
 
-                    // DRUGA GRUPA: Izgled i personalizacija
+                    // nefunkcionalni placeholderi
                     _buildPostavkeGrupa([
                       _PostavkaItem(ikona: Icons.palette_outlined, naslov: "Promjena izgleda", onTap: () {}),
                       _PostavkaItem(ikona: Icons.grid_view_rounded, naslov: "Broj oglasa po stranici", onTap: () {}),

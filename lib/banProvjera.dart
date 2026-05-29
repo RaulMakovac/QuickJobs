@@ -27,7 +27,7 @@ class AuthProvjera {
       if (data['baniran_do'] != null) {
         final banDo = DateTime.parse(data['baniran_do']);
         if (banDo.isAfter(DateTime.now())) {
-          // Računamo koliko je dana/sati ostalo
+          // Računa koliko je dana/sati ostalo
           final preostalo = banDo.difference(DateTime.now());
           if (preostalo.inDays > 0) {
             return "Zabranjeno vam je korištenje aplikacije narednih ${preostalo.inDays} dana zbog prevelikog broja reporta.";

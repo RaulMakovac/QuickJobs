@@ -39,27 +39,27 @@ class _ZaposliState extends State<Zaposli> {
   // --- LOGIKA: PRIHVATI KANDIDATA ---
   Future<void> _prihvatiKandidata(String kandidatId) async {
     try {
-      // 1. Postavi radnika i promijeni status oglasa
+      // Postavi radnika i promijeni status oglasa
       await supabase
           .from('oglasi')
           .update({'obavljac_id': kandidatId, 'status_oglasa': 'u_tijeku'})
           .eq('id', widget.oglas.id);
 
-      // 2. Obriši ostale prijave
+      // Obriši ostale prijave
       await supabase
           .from('prijave')
           .delete()
           .eq('oglas_id', widget.oglas.id)
           .neq('korisnik_id', kandidatId);
 
-      // Unutar funkcije _prihvatiKandidata
-      // 1. Postavi radnika i status (to već imaš)
+      
+      // Postavi radnika i status (to već imaš)
       await supabase
           .from('oglasi')
           .update({'obavljac_id': kandidatId, 'status_oglasa': 'u_tijeku'})
           .eq('id', widget.oglas.id);
 
-      // 2. STVORI CHAT SOBU AUTOMATSKI
+      // STVORI CHAT SOBU AUTOMATSKI
       await supabase.from('chat_sobe').insert({
         'oglas_id': widget.oglas.id,
         'klijent_id': supabase.auth.currentUser!.id,
@@ -69,7 +69,7 @@ class _ZaposliState extends State<Zaposli> {
       if (mounted) {
         Navigator.pop(
           context,
-        ); // Zatvara modal (BottomSheet ili Dialog ako ga imaš)
+        ); // Zatvara modal
         Navigator.pop(context, true);
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -87,7 +87,7 @@ class _ZaposliState extends State<Zaposli> {
   // --- LOGIKA: ODBIJ KANDIDATA ---
   Future<void> _odbijKandidata(String kandidatId) async {
     try {
-      // Brišemo samo tu jednu prijavu (korisnik_id se obično zove stupac u 'prijave')
+      // Brišemo samo tu jednu ODBIJENU prijavu (korisnik_id se obično zove stupac u 'prijave')
       await supabase
           .from('prijave')
           .delete()
@@ -96,7 +96,7 @@ class _ZaposliState extends State<Zaposli> {
 
       if (mounted) {
         Navigator.pop(context); // Zatvori modal
-        setState(() {}); // Osvježi listu kandidata
+        setState(() {}); // Osvježava listu kandidata
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("Kandidat odbijen.")));
@@ -135,7 +135,6 @@ class _ZaposliState extends State<Zaposli> {
 
           return Column(
             children: [
-              // HEADER BOX
               Container(
                 padding: const EdgeInsets.all(20),
                 margin: const EdgeInsets.all(20),

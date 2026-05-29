@@ -93,7 +93,7 @@ class _LoginState extends State<login> {
       backgroundColor: backgroundColor,
       body: Stack(
         children: [
-          // POZADINSKI KRUGOVI
+          // POZADINSKI KRUGOVI - prvih par ekrana koristi built in umjesto dekor.dart krugova, problem za drugi dan ako se sjetim
           Positioned(
             top: -100,
             right: -80,
@@ -175,7 +175,7 @@ class _LoginState extends State<login> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {}, // Ovdje ide reset lozinke kasnije
+                      onPressed: () {}, // Ovdje ide reset lozinke kasnije (treba napravit 2FA reset password flow)
                       child: const Text(
                         'Zaboravili ste lozinku?',
                         style: TextStyle(color: darkBrownColor),
@@ -266,7 +266,7 @@ class _LoginState extends State<login> {
           hintText: hintText,
           hintStyle: const TextStyle(color: hintTextColor),
           prefixIcon: Icon(icon, color: hintTextColor),
-          // POPRAVAK: Ako je lozinka, dodajemo interaktivno oko na kraj polja
+          // EXTRA: Ako je lozinka, dodajemo interaktivno oko na kraj polja DODAT NA REGISTER
           suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(
