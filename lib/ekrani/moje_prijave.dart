@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/ekrani/glavni_ekran.dart';
-import '../dekor.dart'; 
+import '../dekor.dart';
 import 'oglas.dart';
 
 class Prijava {
@@ -21,9 +21,7 @@ class Prijava {
     return Prijava(
       id: json['id'],
       oglasId: json['oglas_id'],
-      oglas: Oglas.fromJson(
-        json['oglasi'],
-      ), // 'oglasi' jer radi join u selectu
+      oglas: Oglas.fromJson(json['oglasi']), 
       createdAt: DateTime.parse(json['created_at']),
     );
   }
@@ -39,7 +37,7 @@ class MojePrijaveEkran extends StatefulWidget {
 class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
   final supabase = Supabase.instance.client;
 
-  // 1. DOHVAĆANJE PRIJAVA BEZ ALIASA (Tako da Oglas.fromJson sve uredno prepozna)
+  // 1. DOHVAĆANJE PRIJAVA BEZ ALIASA
   Future<List<Prijava>> _dohvatiMojePrijave() async {
     final user = supabase.auth.currentUser;
     if (user == null) return [];
@@ -73,7 +71,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
     }
   }
 
-  // 2. LOGIKA ZA OCJENJIVANJE I BRISANJE PRIJAVE ilitiga ROMPICOGLIONI JER JE SVE POVEZANO DOSL
+  // 2. LOGIKA ZA OCJENJIVANJE I BRISANJE PRIJAVE NA KRAJU POSLA
   Future<void> _spremiRecenzijuAutora({
     required Prijava prijava,
     required int ocjena,
@@ -103,7 +101,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
       await supabase.from('prijave').delete().eq('id', prijava.id);
 
       if (mounted) {
-        setState(() {}); // Osvježi listu (prijava nestaje [NADAJMO SE])
+        setState(() {}); // Osvježi listu
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.green,
@@ -198,18 +196,61 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
     );
   }
 
-  Future<void> _otkaziPrijavu(String prijavaId) async {
+  Future<void> _otkaziPrijavu(Prijava prijava, bool zaposlenSam) async {
     try {
-      await supabase.from('prijave').delete().eq('id', prijavaId);
+      final trenutniKorisnikId = supabase.auth.currentUser?.id;
+      if (trenutniKorisnikId == null) return;
+
+      // 1. Ako je radnik već bio prihvaćen, oslobađam oglas postavljanjem obavljac_id na null
+      if (zaposlenSam) {
+        await supabase
+            .from('oglasi')
+            .update({
+              'obavljac_id': null,
+              'status_oglasa':
+                  'otvoren', 
+            })
+            .eq('id', prijava.oglasId);
+      }
+
+      // 2. ARHIVIRANJE CHAT SOBE
+      // Pronalazimo sobu za ovaj oglas gdje je trenutni korisnik radnik i gasimo je
+      await supabase
+          .from('chat_sobe')
+          .update({
+            'status': 'arhivirano', // Prebacujemo iz 'aktivno' u 'arhivirano'
+            'updated_at': DateTime.now()
+                .toIso8601String(), // Čisto da osvježi timestamp
+          })
+          .eq('oglas_id', prijava.oglasId)
+          .eq('radnik_id', trenutniKorisnikId);
+
+      // 3. Brišemo samu prijavu iz tablice 'prijave'
+      await supabase.from('prijave').delete().eq('id', prijava.id);
 
       if (mounted) {
-        setState(() {});
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Prijava otkazana')));
+        setState(() {}); // Osvježavanje liste na ekranu
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: zaposlenSam ? Colors.orange : Colors.green,
+            content: Text(
+              zaposlenSam
+                  ? 'Uspješno ste se odjavili s posla. Chat je arhiviran.'
+                  : 'Prijava uspješno povučena.',
+            ),
+          ),
+        );
       }
     } catch (e) {
       debugPrint("Greška pri otkazivanju: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text("Greška pri otkazivanju: $e"),
+          ),
+        );
+      }
     }
   }
 
@@ -269,8 +310,9 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                   bool zaposlenSam = oglas.obavljacId == user?.id;
                   bool jeZavrseno = oglas.status == 'obavljen';
 
-                  // Ovdje izvlačimo ikonicu specifičnu za vrstu posla
-                  final ikonaPosla = kategorijeSaIkonama[oglas.kategorija] ?? Icons.hourglass_top;
+                  final ikonaPosla =
+                      kategorijeSaIkonama[oglas.kategorija] ??
+                      Icons.hourglass_top;
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 15),
@@ -296,9 +338,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                         child: Icon(
                           jeZavrseno
                               ? Icons.done_all
-                              : (zaposlenSam
-                                    ? Icons.celebration
-                                    : ikonaPosla), // Dinamička ikona umjesto fiksnog pješčanog sata
+                              : (zaposlenSam ? Icons.celebration : ikonaPosla),
                           color: Colors.white,
                         ),
                       ),
@@ -354,6 +394,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
     );
   }
 
+  // 4. PREPRAVLJENI MODAL KOJI SADA PODRŽAVA ODJAVU S AKTIVNOG POSLA
   void _prikaziUpravljanjePrijavom(
     BuildContext context,
     Prijava prijava,
@@ -431,7 +472,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontWeight: FontWeight.w500,
-                  color: Color.fromARGB(255, 0, 0, 0),
+                  color: Colors.black,
                 ),
               ),
 
@@ -449,7 +490,8 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                     child: const Text("Zatvori"),
                   ),
                 ),
-                if (!zaposlenSam && !jeZavrseno) ...[
+                // Gumb se prikazuje uvijek, OSIM ako je posao već skroz završen i arhiviran
+                if (!jeZavrseno) ...[
                   const SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton(
@@ -458,11 +500,11 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                       ),
                       onPressed: () {
                         Navigator.pop(context);
-                        _otkaziPrijavu(prijava.id);
+                        _otkaziPrijavu(prijava, zaposlenSam);
                       },
-                      child: const Text(
-                        "Povuci prijavu",
-                        style: TextStyle(color: Colors.red),
+                      child: Text(
+                        zaposlenSam ? "Odjavi se s posla" : "Povuci prijavu",
+                        style: const TextStyle(color: Colors.red),
                       ),
                     ),
                   ),
