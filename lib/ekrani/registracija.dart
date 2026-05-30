@@ -145,7 +145,7 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
                       ),
                     ),
 
-                    const SizedBox(height: 40),
+                    
 
                     const Text(
                       'Registracija',

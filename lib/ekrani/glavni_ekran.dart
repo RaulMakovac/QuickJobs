@@ -603,9 +603,7 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: const Color(
-        0xFFE5D9D6,
-      ), // Tvoja bgColor - ovo "gasi" overflow vizualno
+      color: const Color(0xFFE5D9D6), 
       child: ClipRect(
         child: OverflowBox(
           minHeight: 0,
@@ -617,10 +615,10 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
     );
   }
 
+  
   @override
   bool shouldRebuild(_StickySearchDelegate oldDelegate) {
-    // Ovo osigurava da se delegat osvježi kad se visina promijeni
-    return oldDelegate.visina != visina;
+    return true; 
   }
 }
 

@@ -43,7 +43,7 @@ class UvjetiKoristenjaEkran extends StatelessWidget {
                         _buildSekcija("2. Opis usluge", 
                           "QuickJobs je digitalna platforma koja služi kao posrednik između Naručitelja (Klijenta) koji objavljuje oglas i Izvršitelja (Radnika) koji se na njega prijavljuje. QuickJobs nije poslodavac niti agencija za zapošljavanje."),
                         _buildSekcija("3. Registracija i Sigurnost", 
-                          "Korisnik mora imati najmanje 15 godina za korištenje Aplikacije. Korisnik je isključivo odgovoran za točnost unesenih podataka i čuvanje tajnosti svoje lozinke."),
+                          "Korisnik mora imati najmanje 18 godina za korištenje Aplikacije. Korisnik je isključivo odgovoran za točnost unesenih podataka i čuvanje tajnosti svoje lozinke."),
                         _buildSekcija("4. Odgovornost za rad i plaćanje", 
                           "Dogovor o isplati naknade vrši se izravno između Naručitelja i Izvršitelja. QuickJobs ne jamči isplatu niti sudjeluje u transakcijama. Korisnici su sami odgovorni za porezne obveze."),
                         _buildSekcija("5. Isključenje odgovornosti", 

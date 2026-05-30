@@ -65,8 +65,8 @@ class intro extends StatelessWidget {
                 const SizedBox(height: 30),
                 // Tekst
                 const Text(
-                  'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean dui arcu, dapibus in dui eu, tincidunt ullamcorper lacus. Donec molestie ex ut erat ultricies feugiat. Pellentesque at vehicula dolor, finibus tristique ligula',
-                  textAlign: TextAlign.center,
+
+"Mjesto gdje ponuda i potražnja za privremenim poslovima postaju jednostavne. Bilo da hitno trebate obaviti zadatak ili tražite fleksibilnu priliku za zaradu, QuickJobs vam omogućuje siguran pronalazak idealnog spoja.",                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.normal,

@@ -763,7 +763,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
               Icon(Icons.report_problem_rounded, color: Colors.red),
               SizedBox(width: 10),
               Text(
-                "Reportaj korisnika",
+                "Prijavi korisnika",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ],
