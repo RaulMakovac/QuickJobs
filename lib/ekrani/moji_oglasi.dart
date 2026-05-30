@@ -106,6 +106,63 @@ class _MojiOglasiState extends State<MojiOglasi> {
     );
   }
 
+  // LOGIKA: REAKTIVACIJA OGLASA AKO DOGOVOR PROPADNE
+  Future<void> _reaktivirajOglas(String oglasId, String? stariObavljacId) async {
+    try {
+      debugPrint("Započeta reaktivacija. Oglas: $oglasId, Radnik za brisanje: $stariObavljacId");
+
+      if (stariObavljacId != null) {
+        // 1. Arhiviranje chata
+        await supabase
+            .from('chat_sobe')
+            .update({'status': 'arhivirano'})
+            .eq('oglas_id', oglasId);
+        debugPrint("Chat soba arhivirana.");
+
+      }
+
+      // 3. Vraćanje oglasa u početno stanje
+      await supabase.from('oglasi').update({
+        'status_oglasa': 'otvoren',
+        'obavljac_id': null,
+      }).eq('id', oglasId);
+      
+      debugPrint("Oglas uspješno vraćen na status 'otvoren' i obavljac_id na null.");
+
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Oglas je uspješno reaktiviran!")),
+        );
+      }
+    } catch (e) {
+      debugPrint("QuickJobs KATASTROFA pri reaktivaciji: $e");
+    }
+  }
+
+  // DIJALOG ZA POTVRDU REACTIVACIJE
+  void _potvrdiReaktivaciju(Oglas oglas) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+        title: const Text("Ponovna objava"),
+        content: Text("Sigurno želite otkazati trenutnog radnika i ponovno otvoriti oglas '${oglas.naslov}' za nove prijave?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Ne")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4A2C29)),
+            onPressed: () { 
+              Navigator.pop(context); 
+              _reaktivirajOglas(oglas.id, oglas.obavljacId);
+            }, 
+            child: const Text("Da, objavi ponovno", style: TextStyle(color: Colors.white))
+          ),
+        ],
+      ),
+    );
+  }
+
   // LOGIKA: ZAKLJUČIVANJE POSLA (Oglas tek tu postaje 'obavljen')
   Future<void> _spremiRecenzijuIZavrsi({required Oglas oglas, required int ocjena, String? komentar}) async {
     try {
@@ -130,7 +187,7 @@ class _MojiOglasiState extends State<MojiOglasi> {
     }
   }
 
-  // LOGIKA: TRAJNO BRISANJE IZ BAZE (I za aktivne koji nemaju radnika i za gotove oglase)
+  // LOGIKA: TRAJNO BRISANJE IZ BAZE
   Future<void> _trajnoObrisiOglas(String id) async {
     try {
       await supabase.from('oglasi').delete().eq('id', id);
@@ -217,13 +274,13 @@ class _MojiOglasiState extends State<MojiOglasi> {
     bool imaRadnika = oglas.obavljacId != null;
     bool jeZavrsen = oglas.status == 'obavljen';
     
-    bool mozeSeObrisati = !imaRadnika || jeZavrsen; // Može se obrisati ako nema radnika (otvoren) ili ako je skroz završen (obavljen)
-    bool mozeSeUrediti = !imaRadnika && !jeZavrsen;  // Može se urediti samo ako je tek otvoren
+    bool mozeSeObrisati = !imaRadnika || jeZavrsen; 
+    bool mozeSeUrediti = !imaRadnika && !jeZavrsen;  
 
     final ikonaKategorije = kategorijeSaIkonama[oglas.kategorija] ?? Icons.person_search;
 
     return Opacity(
-      opacity: jeZavrsen ? 0.65 : 1.0, // Sivi izblijedjeli overlay se primjenjuje AKO I SAMO AKO je oglas 'obavljen'
+      opacity: jeZavrsen ? 0.65 : 1.0, 
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(20),
@@ -298,20 +355,54 @@ class _MojiOglasiState extends State<MojiOglasi> {
                   ],
                 ),
                 if (!jeZavrsen) ...[
-                  ElevatedButton(
-                    onPressed: () async {
-                      if (imaRadnika) {
-                        _pokaziDijalogZaOcjenu(oglas);
-                      } else {
-                        final osvjezi = await Navigator.push(context, MaterialPageRoute(builder: (context) => Zaposli(oglas: oglas)));
-                        if (osvjezi == true) setState(() {});
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(backgroundColor: imaRadnika ? Colors.orange[700] : Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                    child: Text(imaRadnika ? "ZAVRŠI POSAO" : "VIDI PRIJAVE", style: TextStyle(color: imaRadnika ? Colors.white : Colors.black)),
+                  Row(
+                    children: [
+                      if (imaRadnika) ...[
+                        IconButton(
+                          onPressed: () => _potvrdiReaktivaciju(oglas),
+                          icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 28),
+                          tooltip: "Ponovno objavi oglas",
+                        ),
+                        const SizedBox(width: 4), 
+                      ],
+                      ElevatedButton(
+                        onPressed: () async {
+                          if (imaRadnika) {
+                            _pokaziDijalogZaOcjenu(oglas);
+                          } else {
+                            // POZIV EKRANA ZA ZAPOŠLJAVANJE
+                            final osvjezi = await Navigator.push(
+                              context, 
+                              MaterialPageRoute(builder: (context) => Zaposli(oglas: oglas))
+                            );
+                            if (osvjezi == true) {
+                              if (mounted) {
+                                setState(() {}); // Osvježava listu oglasa na ekranu
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Radnik je uspješno prihvaćen!"),
+                                    backgroundColor: Color(0xFF4A2C29),
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: imaRadnika ? Colors.orange[700] : Colors.white, 
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
+                        ),
+                        child: Text(imaRadnika ? "ZAVRŠI POSAO" : "VIDI PRIJAVE", style: TextStyle(color: imaRadnika ? Colors.white : Colors.black)),
+                      ),
+                      if (imaRadnika) ...[
+                        const SizedBox(width: 4),
+                        IconButton(
+                          onPressed: () => Navigator.pushNamed(context, '/ekrani/chat_hub'), 
+                          icon: const Icon(Icons.forum_rounded, color: Colors.white)
+                        ),
+                      ],
+                    ],
                   ),
-                  if (imaRadnika)
-                    IconButton(onPressed: () => Navigator.pushNamed(context, '/ekrani/chat_hub'), icon: const Icon(Icons.forum_rounded, color: Colors.white)),
                 ] else
                   const Text("ZAVRŠENO", style: TextStyle(color: Colors.black45, fontWeight: FontWeight.bold, fontSize: 13)),
               ],
