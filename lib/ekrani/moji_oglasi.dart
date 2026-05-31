@@ -136,7 +136,7 @@ class _MojiOglasiState extends State<MojiOglasi> {
         );
       }
     } catch (e) {
-      debugPrint("QuickJobs KATASTROFA pri reaktivaciji: $e");
+      debugPrint("KATASTROFA pri reaktivaciji: $e");
     }
   }
 
@@ -413,3 +413,5 @@ class _MojiOglasiState extends State<MojiOglasi> {
     );
   }
 }
+
+

@@ -38,7 +38,7 @@ class Oglas {
     this.kategorija = "Ostalo",
   });
 
-  Oglas copyWith({String? autorIme}) {
+  Oglas copyWith({String? autorIme}) { // potrebno za ažuriranje imena autora nakon učitavanja oglasa, jer se ime nalazi u povezanom profilu
     return Oglas(
       id: id,
       naslov: naslov,
