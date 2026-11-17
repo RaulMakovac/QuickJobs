@@ -1,123 +1,115 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../dekor.dart'; // Uvoz centraliziranih boja i teme
 
 class odabir extends StatelessWidget {
   const odabir({super.key});
 
-  
-  static const backgroundColor = Color(0xFFE5D9D6);
-  static const circleColor = Color(0xFFD6C8C5);
-  static const darkBrownColor = Color(0xFF6D3F3A);
-  static const textColor = Color(0xFF2E2E2E);
-  static const cardBorderColor = Color(0xFF8F6E68);
-
   @override
   Widget build(BuildContext context) {
+    // Dohvaćamo definirane boje iz dekor.dart
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
+
     return Scaffold(
-      backgroundColor: backgroundColor,
-      body: Stack(
-        children: [
-          // POZADINSKI KRUGOVI
-          Positioned(top: -50, left: -50, child: _CircleCustom(size: 200)),
-          Positioned(top: 50, left: -80, child: _CircleCustom(size: 250)),
-          Positioned(bottom: -100, right: -50, child: _CircleCustom(size: 300)),
-
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(top: 16),                                        
-                      child: IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new,
-                          size: 26,
-                          color: Color(0xFF4A2C29),
-                        ),
+      backgroundColor: boje.bg,
+      body: PozadinaKrugovi(
+        krugBoja: boje.C, // Koristi globalni sustav krugova
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 16),                                        
+                    child: IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(
+                        Icons.arrow_back_ios_new,
+                        size: 26,
+                        color: boje.A,
                       ),
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 60),
+                const SizedBox(height: 60),
 
-                  // NASLOV
-                  const Text(
-                    'Dobrodošli!',
-                    style: TextStyle(
-                      fontSize: 42,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2E2E2E),
+                // NASLOV
+                Text(
+                  'Dobrodošli!',
+                  style: TextStyle(
+                    fontSize: 42,
+                    fontWeight: FontWeight.bold,
+                    color: boje.A,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Molimo vas da odaberete tražite li posao ili radnika',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: boje.A?.withValues(alpha: 0.8),
+                    height: 1.4,
+                  ),
+                ),
+
+                const SizedBox(height: 60),
+
+                // KARTICE ZA ODABIR
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildRoleCard(
+                      context,
+                      title: 'Tražim radnika',
+                      svgPath: 'assets/images/trazim_radnika.svg',
+                      boje: boje,
+                      onTap: () {
+                        Navigator.pushNamed(context, '/ekrani/jednostavni_ekran');
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Molimo vas da odaberete tražite li posao ili radnika',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF5A5A5A),
-                      height: 1.4,
+                    _buildRoleCard(
+                      context,
+                      title: 'Tražim posao',
+                      svgPath: 'assets/images/trazim_posao.svg',
+                      boje: boje,
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/ekrani/glavni_ekran',
+                        );
+                      },
                     ),
-                  ),
+                  ],
+                ),
+                const Spacer(),
 
-                  const SizedBox(height: 60),
-
-                  // KARTICE ZA ODABIR
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildRoleCard(
-                        context,
-                        title: 'Tražim radnika',
-                        svgPath: 'assets/images/trazim_radnika.svg',
-                        onTap: () {
-                          Navigator.pushNamed(context, '/ekrani/jednostavni_ekran');
-                        },
-                      ),
-                      _buildRoleCard(
-                        context,
-                        title: 'Tražim posao',
-                        svgPath: 'assets/images/trazim_posao.svg',
-                        onTap: () {
-                          
-                          Navigator.pushNamed(
-                            context,
-                            '/ekrani/glavni_ekran',
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-
-                  // DONJA ILUSTRACIJA
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 20.0),
-                    child: SvgPicture.asset(
-                      'assets/images/upitnik.svg', 
+                // DONJA ILUSTRACIJA
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 20.0),
+                  child: SvgPicture.asset(
+                    'assets/images/upitnik.svg', 
+                    height: 180,
+                    placeholderBuilder: (context) => SizedBox(
                       height: 180,
-                      placeholderBuilder: (context) => const SizedBox(
-                        height: 180,
-                        child: Center(
-                          child: Icon(
-                            Icons.image,
-                            size: 50,
-                            color: circleColor,
-                          ),
+                      child: Center(
+                        child: Icon(
+                          Icons.image,
+                          size: 50,
+                          color: boje.C,
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -127,6 +119,7 @@ class odabir extends StatelessWidget {
     BuildContext context, {
     required String title,
     required String svgPath,
+    required QuickJobsColors boje,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -138,12 +131,12 @@ class odabir extends StatelessWidget {
             height: 140,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: boje.B, // Kartica koristi boju C
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: cardBorderColor, width: 3),
+              border: Border.all(color: boje.B!, width: 3), // Rub koristi boju B
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withOpacity(0.15),
                   blurRadius: 10,
                   offset: const Offset(0, 5),
                 ),
@@ -155,11 +148,11 @@ class odabir extends StatelessWidget {
                 svgPath,
                 fit: BoxFit.contain,
                 placeholderBuilder: (context) => Container(
-                  color: backgroundColor,
-                  child: const Icon(
+                  color: boje.bg,
+                  child: Icon(
                     Icons.person,
                     size: 40,
-                    color: cardBorderColor,
+                    color: boje.A,
                   ),
                 ),
               ),
@@ -168,31 +161,13 @@ class odabir extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: textColor,
+              color: boje.A,
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// Pomoćni widget za krugove u pozadini
-class _CircleCustom extends StatelessWidget {
-  final double size;
-  const _CircleCustom({required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        color: Color(0xFFD6C8C5),
-        shape: BoxShape.circle,
       ),
     );
   }

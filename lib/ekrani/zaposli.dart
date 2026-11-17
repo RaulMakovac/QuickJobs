@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '/ekrani/glavni_ekran.dart';
 import '/ekrani/korisnicki_profil.dart';
+import '../dekor.dart';
 
 class Zaposli extends StatefulWidget {
   final Oglas oglas;
@@ -13,8 +14,6 @@ class Zaposli extends StatefulWidget {
 
 class _ZaposliState extends State<Zaposli> {
   final supabase = Supabase.instance.client;
-  
-  // 1. Definiramo Future kao varijablu stanja kako bismo ga mogli sigurno osvježavati
   late Future<List<Map<String, dynamic>>> _prijaveFuture;
 
   @override
@@ -23,7 +22,6 @@ class _ZaposliState extends State<Zaposli> {
     _prijaveFuture = _dohvatiPrijavljeneKorisnike();
   }
 
-  // --- LOGIKA: DOHVAĆANJE KANDIDATA ---
   Future<List<Map<String, dynamic>>> _dohvatiPrijavljeneKorisnike() async {
     final response = await supabase
         .from('prijave')
@@ -41,7 +39,6 @@ class _ZaposliState extends State<Zaposli> {
     return lista;
   }
 
-  // --- LOGIKA: PRIHVATI KANDIDATA ---
   Future<void> _prihvatiKandidata(String kandidatId) async {
     try {
       await supabase
@@ -73,19 +70,14 @@ class _ZaposliState extends State<Zaposli> {
     }
   }
 
-// --- LOGIKA: ODBIJ KANDIDATA ---
   Future<void> _odbijKandidata(String kandidatId) async {
     try {
-      // Dodajemo .select() za debug ispod da ima što ispisat
       final List<dynamic> obrisaniRedci = await supabase
           .from('prijave')
           .delete()
           .eq('oglas_id', widget.oglas.id)
           .eq('korisnik_id', kandidatId)
           .select();
-
-      // DEBUG SAVIOR!!!!!!!
-      debugPrint("QuickJobs DETEKTIV: Broj obrisanih redaka iz baze -> ${obrisaniRedci.length}");
 
       if (mounted) {
         setState(() {
@@ -115,113 +107,117 @@ class _ZaposliState extends State<Zaposli> {
 
   @override
   Widget build(BuildContext context) {
-    const darkBrown = Color(0xFF4A2C29);
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE5D9D6),
+      backgroundColor: boje.bg,
       appBar: AppBar(
         title: Text(widget.oglas.naslov),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: darkBrown,
+        foregroundColor: boje.A,
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _prijaveFuture, // Varijabla stanja umjesto izravnog poziva funkcije
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: darkBrown));
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text("Greška: ${snapshot.error}"));
-          }
+      body: PozadinaKrugovi(
+        krugBoja: boje.C,
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _prijaveFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator(color: boje.A));
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text("Greška: ${snapshot.error}", style: TextStyle(color: boje.A)));
+            }
 
-          final prijave = snapshot.data ?? [];
-          final brojPrijava = prijave.length;
+            final prijave = snapshot.data ?? [];
+            final brojPrijava = prijave.length;
 
-          return Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                margin: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8F6E68),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Ukupno prijava: $brojPrijava", style: const TextStyle(color: Colors.white70, fontSize: 16)),
-                        const SizedBox(height: 5),
-                        const Text("Pregledajte kandidate ispod", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const Icon(Icons.group, color: Colors.white, size: 40),
-                  ],
-                ),
-              ),
-              const Text("LISTA KANDIDATA", style: TextStyle(fontWeight: FontWeight.bold, color: darkBrown)),
-              const Divider(indent: 50, endIndent: 50),
-              Expanded(
-                child: prijave.isEmpty
-                    ? const Center(child: Text("Još nema prijava."))
-                    : ListView.builder(
-                        itemCount: prijave.length,
-                        itemBuilder: (context, index) {
-                          final profil = prijave[index]['profiles'];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                            child: ListTile(
-                              leading: const CircleAvatar(
-                                backgroundColor: Color(0xFFD1BDB9),
-                                child: Icon(Icons.person, color: darkBrown),
-                              ),
-                              title: Text(profil['puno_ime'] ?? "Korisnik", style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text("Ocjena: ${profil['ocjena_korisnika'] ?? '0.0'} ★"),
-                              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF8F6E68)),
-                              onTap: () => _prikaziDetaljeKandidata(profil),
-                            ),
-                          );
-                        },
+            return Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  margin: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: boje.C,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Ukupno prijava: $brojPrijava", style: TextStyle(color: boje.A?.withValues(alpha: 0.7), fontSize: 16)),
+                          const SizedBox(height: 5),
+                          Text("Pregledajte kandidate ispod", style: TextStyle(color: boje.A, fontWeight: FontWeight.bold)),
+                        ],
                       ),
-              ),
-            ],
-          );
-        },
+                      Icon(Icons.group, color: boje.A, size: 40),
+                    ],
+                  ),
+                ),
+                Text("LISTA KANDIDATA", style: TextStyle(fontWeight: FontWeight.bold, color: boje.A)),
+                Divider(indent: 50, endIndent: 50, color: boje.A?.withValues(alpha: 0.2)),
+                Expanded(
+                  child: prijave.isEmpty
+                      ? Center(child: Text("Još nema prijava.", style: TextStyle(color: boje.A)))
+                      : ListView.builder(
+                          itemCount: prijave.length,
+                          itemBuilder: (context, index) {
+                            final profil = prijave[index]['profiles'];
+                            return Card(
+                              color: boje.C,
+                              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: boje.bg,
+                                  child: Icon(Icons.person, color: boje.A),
+                                ),
+                                title: Text(profil['puno_ime'] ?? "Korisnik", style: TextStyle(fontWeight: FontWeight.bold, color: boje.A)),
+                                subtitle: Text("Ocjena: ${profil['ocjena_korisnika'] ?? '0.0'} ★", style: TextStyle(color: boje.A?.withValues(alpha: 0.7))),
+                                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: boje.A),
+                                onTap: () => _prikaziDetaljeKandidata(profil, boje),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 
-  void _prikaziDetaljeKandidata(Map<String, dynamic> profil) {
+  void _prikaziDetaljeKandidata(Map<String, dynamic> profil, QuickJobsColors boje) {
     final ocjena = profil['ocjena_korisnika'];
     final imaOcjenu = ocjena != null && ocjena > 0;
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFFE5D9D6),
+      backgroundColor: boje.bg,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
       builder: (context) => Padding(
         padding: const EdgeInsets.all(30),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.account_circle, size: 60, color: Color(0xFF4A2C29)),
+            Icon(Icons.account_circle, size: 60, color: boje.A),
             const SizedBox(height: 10),
-            Text(profil['puno_ime'] ?? "Korisnik", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF4A2C29))),
-            Text(imaOcjenu ? "Ocjena: $ocjena/5 ★" : "Nema recenzija", style: const TextStyle(color: Colors.black54)),
+            Text(profil['puno_ime'] ?? "Korisnik", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: boje.A)),
+            Text(imaOcjenu ? "Ocjena: $ocjena/5 ★" : "Nema recenzija", style: TextStyle(color: boje.A?.withValues(alpha: 0.6))),
             const SizedBox(height: 25),
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (context) => KorisnickiProfil(prikazaniKorisnikId: profil['id'])));
               },
-              icon: const Icon(Icons.person_search, color: Colors.white),
-              label: const Text("UVID U PROFIL PRIJAVLJENOG", style: TextStyle(color: Colors.white)),
+              icon: Icon(Icons.person_search, color: boje.bg),
+              label: Text("UVID U PROFIL PRIJAVLJENOG", style: TextStyle(color: boje.bg)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF8F6E68),
+                backgroundColor: boje.A,
                 minimumSize: const Size(double.infinity, 45),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
@@ -229,7 +225,6 @@ class _ZaposliState extends State<Zaposli> {
             const SizedBox(height: 15),
             Row(
               children: [
-                // GUMB ODBIJ
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () async {
@@ -244,7 +239,6 @@ class _ZaposliState extends State<Zaposli> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                // GUMB PRIHVATI
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {                  
@@ -260,13 +254,13 @@ class _ZaposliState extends State<Zaposli> {
                 ),
               ],
             ),
-            const Divider(height: 40),
+            Divider(height: 40, color: boje.A?.withValues(alpha: 0.2)),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.phone, size: 20, color: Color(0xFF4A2C29)),
+                Icon(Icons.phone, size: 20, color: boje.A),
                 const SizedBox(width: 10),
-                Text(profil['telefon'] ?? "Nema broja", style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(profil['telefon'] ?? "Nema broja", style: TextStyle(fontWeight: FontWeight.bold, color: boje.A)),
               ],
             ),
           ],

@@ -56,24 +56,18 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-    const tamnoSmedja = Color(0xFF4A2C29);
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE5D9D6),
+      backgroundColor: boje.bg,
       body: PozadinaKrugovi(
-        // Koristimo tvoju custom pozadinu
+        krugBoja: boje.C,
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(
-                context,
-                tamnoSmedja,
-                widget.oglas.naslov,
-              ), // Dinamički naslov
+              _buildHeader(context, boje, widget.oglas.naslov),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
@@ -82,39 +76,34 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
                   ),
                   child: Column(
                     children: [
-                      // STAKLENI KONTEJNER OKO FORME
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.3),
+                          color: boje.C,
                           borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.4),
-                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            
                             _buildInputField(
                               "Naslov posla",
                               _naslovController,
                               Icons.work_outline,
-                              tamnoSmedja,
+                              boje,
                             ),
                             const SizedBox(height: 20),
                             _buildInputField(
                               "Lokacija / Adresa",
                               _adresaController,
                               Icons.location_on_outlined,
-                              tamnoSmedja,
+                              boje,
                             ),
                             const SizedBox(height: 20),
                             _buildInputField(
                               "Isplata (€)",
                               _isplataController,
                               Icons.euro_symbol_rounded,
-                              tamnoSmedja,
+                              boje,
                               keyboardType: TextInputType.number,
                             ),
                             const SizedBox(height: 20),
@@ -122,16 +111,13 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
                               "Detaljan opis",
                               _opisController,
                               Icons.notes_rounded,
-                              tamnoSmedja,
+                              boje,
                               maxLines: 5,
                             ),
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 40),
-
-                      // GUMB ZA SPREMANJE PROMJENA
                       GestureDetector(
                         onTap: _updateOglas,
                         child: Column(
@@ -140,28 +126,21 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
                               height: 80,
                               width: 80,
                               decoration: BoxDecoration(
-                                color: tamnoSmedja,
+                                color: boje.A,
                                 shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: tamnoSmedja.withOpacity(0.3),
-                                    blurRadius: 15,
-                                    offset: const Offset(0, 8),
-                                  ),
-                                ],
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.check_rounded,
                                 size: 45,
-                                color: Colors.white,
+                                color: boje.bg,
                               ),
                             ),
                             const SizedBox(height: 12),
-                            const Text(
+                            Text(
                               "Spremi promjene",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: tamnoSmedja,
+                                color: boje.A,
                                 fontSize: 16,
                               ),
                             ),
@@ -180,23 +159,23 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, Color boja, String naslovPosla) {
+  Widget _buildHeader(BuildContext context, QuickJobsColors boje, String naslovPosla) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Row(
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios_new, size: 22),
+            icon: Icon(Icons.arrow_back_ios_new, size: 22, color: boje.A),
           ),
           Expanded(
             child: Column(
               children: [
-                const Text(
+                Text(
                   "Uredi oglas",
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.black54,
+                    color: boje.A?.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -204,14 +183,12 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
                   '"$naslovPosla"',
                   textAlign: TextAlign.center,
                   maxLines: 2,
-                  overflow: TextOverflow
-                      .ellipsis, // Ako je naslov predug, stavit će tri točkice
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
-                    color: boja,
-                    fontStyle: FontStyle
-                        .italic, // Navodnici izgledaju bolje u italic verziji IMHO
+                    color: boje.A,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
               ],
@@ -227,14 +204,13 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
     String labela,
     TextEditingController controller,
     IconData icon,
-    Color boja, {
+    QuickJobsColors boje, {
     int maxLines = 1,
     TextInputType? keyboardType,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // LABELA IZNAD POLJA
         Padding(
           padding: const EdgeInsets.only(left: 10, bottom: 8),
           child: Text(
@@ -242,24 +218,22 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: boja.withOpacity(0.8),
+              color: boje.A?.withValues(alpha: 0.8),
             ),
           ),
         ),
-        // POLJE ZA UNOS
         TextField(
           controller: controller,
           maxLines: maxLines,
           keyboardType: keyboardType,
-          style: const TextStyle(fontSize: 16, color: Colors.black87),
+          style: TextStyle(fontSize: 16, color: boje.A),
           decoration: InputDecoration(
-            // Ikona je sada fiksirana u vrhu čak i kod opisa (maxLines > 1)
             prefixIcon: Padding(
               padding: EdgeInsets.only(bottom: maxLines > 1 ? 80 : 0),
-              child: Icon(icon, color: boja, size: 22),
+              child: Icon(icon, color: boje.A, size: 22),
             ),
             filled: true,
-            fillColor: const Color(0xFFD1BDB9).withOpacity(0.7),
+            fillColor: boje.bg?.withValues(alpha: 0.7),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20),
               borderSide: BorderSide.none,

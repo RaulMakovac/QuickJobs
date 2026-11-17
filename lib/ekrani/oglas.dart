@@ -4,8 +4,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../dekor.dart';
 import '/ekrani/korisnicki_profil.dart';
 
-
-
 class DetaljiOglasa extends StatelessWidget {
   final Oglas oglas;
   final bool samoPregled;
@@ -16,17 +14,15 @@ class DetaljiOglasa extends StatelessWidget {
     this.samoPregled = false, 
   });
 
-  static const bgColor = Color(0xFFE5D9D6);
-  static const darkBrown = Color(0xFF4A2C29);
-  static const cardColor = Color(0xFF8F6E68);
-
-
-
   @override
   Widget build(BuildContext context) {
+    // Dohvaćamo definirane boje iz dekor.dart
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
+
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: boje.bg,
       body: PozadinaKrugovi(
+        krugBoja: boje.C, // Koristi globalni sustav krugova
         child: SafeArea(
           bottom: false,
           child: SingleChildScrollView(
@@ -34,13 +30,13 @@ class DetaljiOglasa extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(25, 25, 25, 200),
             child: Column(
               children: [
-                _buildAppBar(context),
+                _buildAppBar(context, boje),
                 const SizedBox(height: 35),
-                _buildJobTitleHeader(),
+                _buildJobTitleHeader(boje),
                 
                 // Prikaz odabrane kategorije posla ispod naslova
                 const SizedBox(height: 15),
-                _buildKategorijaBadge(),
+                _buildKategorijaBadge(boje),
                 
                 // --- KONTROLIRANI RAZMAK I BANNER ---
                 if (oglas.jeReportan) ...[
@@ -49,7 +45,7 @@ class DetaljiOglasa extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.red[50]!.withOpacity(0.85),
+                      color: Colors.red[50]!.withValues(alpha: 0.85),
                       border: Border.all(color: Colors.redAccent, width: 1.5),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: const [
@@ -95,28 +91,28 @@ class DetaljiOglasa extends StatelessWidget {
                 ],
 
                 const SizedBox(height: 25),
-                _buildAuthorSection(context),
+                _buildAuthorSection(context, boje),
 
                 const SizedBox(height: 25),
-                _buildDetailRow('Adresa: ${oglas.adresa}', Icons.location_on_rounded),
+                _buildDetailRow('Adresa: ${oglas.adresa}', Icons.location_on_rounded, boje),
                 const SizedBox(height: 12),
-                _buildDetailRow('Isplata: ${oglas.isplata}€', Icons.euro_rounded),
+                _buildDetailRow('Isplata: ${oglas.isplata}€', Icons.euro_rounded, boje),
 
                 const SizedBox(height: 25),
-                _buildDescriptionCard(),
+                _buildDescriptionCard(boje),
 
                 const SizedBox(height: 45),
 
                 // --- UVJETNI PRIKAZ GUMBA ---
                 if (samoPregled)
-                  const Column(
+                  Column(
                     children: [
-                      Icon(Icons.info_outline, color: darkBrown, size: 40),
-                      SizedBox(height: 10),
+                      Icon(Icons.info_outline, color: boje.A, size: 40),
+                      const SizedBox(height: 10),
                       Text(
                         'Pregled aktivne prijave',
                         style: TextStyle(
-                          color: darkBrown,
+                          color: boje.A,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -124,7 +120,7 @@ class DetaljiOglasa extends StatelessWidget {
                     ],
                   )
                 else
-                  _buildApplyButton(context),
+                  _buildApplyButton(context, boje),
               ],
             ),
           ),
@@ -134,26 +130,26 @@ class DetaljiOglasa extends StatelessWidget {
   }
 
   // --- BADGE INDIKATOR KATEGORIJE ---
-  Widget _buildKategorijaBadge() {
+  Widget _buildKategorijaBadge(QuickJobsColors boje) {
     final nazivKategorije = oglas.kategorija;
     final ikonaKategorije = kategorijeSaIkonama[nazivKategorije] ?? Icons.more_horiz_rounded;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: darkBrown.withOpacity(0.08),
+        color: boje.C,
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: darkBrown.withOpacity(0.15), width: 1),
+        border: Border.all(color: boje.B!.withValues(alpha: 0.5), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(ikonaKategorije, color: darkBrown, size: 20),
+          Icon(ikonaKategorije, color: boje.A, size: 20),
           const SizedBox(width: 8),
           Text(
             nazivKategorije,
-            style: const TextStyle(
-              color: darkBrown,
+            style: TextStyle(
+              color: boje.A,
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
@@ -164,7 +160,7 @@ class DetaljiOglasa extends StatelessWidget {
   }
 
   // --- SEKCIJA AUTORA ---
-  Widget _buildAuthorSection(BuildContext context) {
+  Widget _buildAuthorSection(BuildContext context, QuickJobsColors boje) {
     return GestureDetector(
       onTap: () {
         if (oglas.autorId != null && oglas.autorId!.isNotEmpty) {
@@ -183,13 +179,13 @@ class DetaljiOglasa extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: cardColor.withOpacity(0.15),
+          color: boje.C,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: cardColor.withOpacity(0.3), width: 1),
+          border: Border.all(color: boje.B!.withValues(alpha: 0.4), width: 1),
         ),
         child: Row(
           children: [
-            _buildSquareImage(),
+            _buildSquareImage(boje),
             const SizedBox(width: 15),
             Expanded(
               child: Column(
@@ -197,15 +193,15 @@ class DetaljiOglasa extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.account_circle, size: 30, color: darkBrown),
+                      Icon(Icons.account_circle, size: 30, color: boje.A),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           oglas.autorIme ?? 'Nepoznat',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: darkBrown,
+                            color: boje.A,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -213,12 +209,12 @@ class DetaljiOglasa extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 38),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 38),
                     child: Text(
                       'UVID U PROFIL POSLODAVCA',
                       style: TextStyle(
-                        color: cardColor,
+                        color: boje.A?.withValues(alpha: 0.7),
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.5,
@@ -228,7 +224,7 @@ class DetaljiOglasa extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: darkBrown, size: 18),
+            Icon(Icons.arrow_forward_ios_rounded, color: boje.A, size: 18),
           ],
         ),
       ),
@@ -236,7 +232,7 @@ class DetaljiOglasa extends StatelessWidget {
   }
 
   // --- GUMB ZA PRIJAVU NA OGLAS---
-  Widget _buildApplyButton(BuildContext context) {
+  Widget _buildApplyButton(BuildContext context, QuickJobsColors boje) {
     return Column(
       children: [
         GestureDetector(
@@ -244,10 +240,10 @@ class DetaljiOglasa extends StatelessWidget {
           child: Container(
             width: 90,
             height: 90,
-            decoration: const BoxDecoration(
-              color: cardColor,
+            decoration: BoxDecoration(
+              color: boje.A,
               shape: BoxShape.circle,
-              boxShadow: [
+              boxShadow: const [
                 BoxShadow(
                   color: Colors.black26,
                   blurRadius: 10,
@@ -255,13 +251,13 @@ class DetaljiOglasa extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(Icons.check, size: 55, color: Colors.black),
+            child: Icon(Icons.check, size: 55, color: boje.bg),
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Prijavi se na posao!',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: boje.A),
         ),
       ],
     );
@@ -297,17 +293,17 @@ class DetaljiOglasa extends StatelessWidget {
     }
   }
 
-  Widget _buildAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context, QuickJobsColors boje) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         IconButton(
           onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_ios_new, size: 30),
+          icon: Icon(Icons.arrow_back_ios_new, size: 30, color: boje.A),
         ),
-        const Text(
+        Text(
           'Opis oglasa',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: boje.A),
         ),
         IconButton(
           icon: const Icon(
@@ -317,26 +313,26 @@ class DetaljiOglasa extends StatelessWidget {
           ),
           tooltip: "Prijavi oglas",
           onPressed: () {
-            _prikaziDijalogZaPrijavuOglasa(context, oglas.id);
+            _prikaziDijalogZaPrijavuOglasa(context, oglas.id, boje);
           },
         ),
       ],
     );
   }
 
-  Widget _buildJobTitleHeader() {
+  Widget _buildJobTitleHeader(QuickJobsColors boje) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
       decoration: BoxDecoration(
-        color: darkBrown,
+        color: boje.A,
         borderRadius: BorderRadius.circular(25),
       ),
       child: Text(
         oglas.naslov,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white,
+        style: TextStyle(
+          color: boje.bg,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
@@ -344,25 +340,25 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  Widget _buildDescriptionCard() {
+  Widget _buildDescriptionCard(QuickJobsColors boje) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: boje.C,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "Detaljni opis posla:",
-            style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 13),
+            style: TextStyle(color: boje.A?.withValues(alpha: 0.7), fontWeight: FontWeight.bold, fontSize: 13),
           ),
           const SizedBox(height: 8),
           Text(
             oglas.opis.isEmpty ? 'Nema opisa.' : oglas.opis,
-            style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.4),
+            style: TextStyle(color: boje.A, fontSize: 15, height: 1.4),
           ),
         ],
       ),
@@ -379,37 +375,36 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  Widget _buildSquareImage() {
+  Widget _buildSquareImage(QuickJobsColors boje) {
     return Container(
       width: 65,
       height: 65,
       decoration: BoxDecoration(
-        color: Colors.green[200],
+        color: boje.bg?.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.white, width: 2),
+        border: Border.all(color: boje.A!, width: 1.5),
       ),
-      child: const Icon(Icons.image, color: Colors.white, size: 30),
+      child: Icon(Icons.image, color: boje.A, size: 30),
     );
   }
 
-
-  Widget _buildDetailRow(String text, IconData icon) {
+  Widget _buildDetailRow(String text, IconData icon, QuickJobsColors boje) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: cardColor.withOpacity(0.85),
+        color: boje.C,
         borderRadius: BorderRadius.circular(15),
       ),
       child: Row( 
         children: [
-          Icon(icon, color: Colors.white, size: 20),
+          Icon(icon, color: boje.A, size: 20),
           const SizedBox(width: 15),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: boje.A,
                 fontWeight: FontWeight.w600,
                 fontSize: 15,
               ),
@@ -420,7 +415,7 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  void _prikaziDijalogZaPrijavuOglasa(BuildContext context, String oglasId) {
+  void _prikaziDijalogZaPrijavuOglasa(BuildContext context, String oglasId, QuickJobsColors boje) {
     String odabraniRazlog = "Scam / Prijevara";
     final komentarController = TextEditingController();
 
@@ -428,29 +423,32 @@ class DetaljiOglasa extends StatelessWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: boje.bg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.report_problem_rounded, color: Colors.red),
-              SizedBox(width: 10),
+              const Icon(Icons.report_problem_rounded, color: Colors.red),
+              const SizedBox(width: 10),
               Text(
                 "Prijavi oglas",
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.bold, color: boje.A),
               ),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Odaberite razlog zašto prijavljujete ovaj oglas:"),
+              Text("Odaberite razlog zašto prijavljujete ovaj oglas:", style: TextStyle(color: boje.A)),
               const SizedBox(height: 15),
               DropdownButtonFormField<String>(
-                initialValue: odabraniRazlog,
+                value: odabraniRazlog,
+                dropdownColor: boje.C,
+                style: TextStyle(color: boje.A, fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: Colors.grey[200],
+                  fillColor: boje.C,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -461,17 +459,19 @@ class DetaljiOglasa extends StatelessWidget {
                   "Lažni oglas",
                   "Neprimjeren sadržaj",
                   "Ostalo",
-                ].map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                ].map((r) => DropdownMenuItem(value: r, child: Text(r, style: TextStyle(color: boje.A)))).toList(),
                 onChanged: (v) => setDialogState(() => odabraniRazlog = v!),
               ),
               const SizedBox(height: 15),
               TextField(
                 controller: komentarController,
                 maxLines: 3,
+                style: TextStyle(color: boje.A),
                 decoration: InputDecoration(
                   hintText: "Opišite detaljnije (opcionalno)...",
+                  hintStyle: TextStyle(color: boje.A?.withValues(alpha: 0.6)),
                   filled: true,
-                  fillColor: Colors.grey[200],
+                  fillColor: boje.C,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -483,11 +483,12 @@ class DetaljiOglasa extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Odustani"),
+              child: Text("Odustani", style: TextStyle(color: boje.A)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4A2C29),
+                backgroundColor: boje.A,
+                foregroundColor: boje.bg,
               ),
               onPressed: () async {
                 final user = Supabase.instance.client.auth.currentUser;
@@ -515,10 +516,7 @@ class DetaljiOglasa extends StatelessWidget {
                   debugPrint("Greška pri slanju reporta: $e");
                 }
               },
-              child: const Text(
-                "Pošalji",
-                style: TextStyle(color: Colors.white),
-              ),
+              child: const Text("Pošalji"),
             ),
           ],
         ),

@@ -15,7 +15,6 @@ import 'ekrani/chat_hub.dart';
 import 'dekor.dart';
 import 'ekrani/jednostavni_ekran.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   ErrorWidget.builder = (FlutterErrorDetails details) {
@@ -23,53 +22,63 @@ void main() async {
     if (isOverflowError) return const SizedBox.shrink(); // Sakrij samo overflow
     return ErrorWidget(details.exception); // Pokaži ostale greške
   };
+  
   // Učitavanje .env datoteke
   await dotenv.load(fileName: ".env");
+  
   // Inicijalizacija Supabasea koristeći dotenv
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL'] ?? '', 
     anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
     authOptions: const FlutterAuthClientOptions(
-    authFlowType: AuthFlowType.pkce,
-  ),
+      authFlowType: AuthFlowType.pkce,
+    ),
   );
 
   runApp(const MyApp());
 }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'QuickJobs',
-      debugShowCheckedModeBanner: false, 
-      builder: (context, child) {
-    return PozadinaKrugovi(
-      child: child ?? const SizedBox(),
+    // Slušamo promjene iz themeNotifier-a definiranog u dekor.dart
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, trenutniMod, child) {
+        return MaterialApp(
+          title: 'QuickJobs',
+          debugShowCheckedModeBanner: false, 
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: trenutniMod, // Ovdje sada dinamički mijenjamo temu!
+          
+          builder: (context, child) {
+            return PozadinaKrugovi(
+              child: child ?? const SizedBox(),
+            );
+          },
+
+          initialRoute: '/',
+
+          // rute
+          routes: {
+            '/': (context) => const intro(),
+            '/ekrani/registracija': (context) => const RegistracijaEkran(),
+            '/ekrani/login': (context) => const login(),
+            '/ekrani/odabir': (context) => const odabir(),
+            '/ekrani/glavni_ekran': (context) => const glavni_ekran(),
+            '/ekrani/objava_oglasa': (context) => const ObjavaOglasa(),
+            '/ekrani/job_hub': (context) => const MojiPosloviHub(),
+            '/ekrani/moji_oglasi': (context) => const MojiOglasi(),
+            '/ekrani/korisnicki_profil': (context) => const KorisnickiProfil(),
+            '/ekrani/moje_prijave': (context) => const MojePrijaveEkran(),
+            '/ekrani/chat_hub': (context) => const ChatHub(),
+            '/ekrani/jednostavni_ekran': (context) => const JednostavniIzbornik(),
+          },
+        );
+      },
     );
-  },
-
-     //initialRoute: '/ekrani/glavni_ekran',
-     initialRoute: '/',
-
-    // rute
-    routes: {
-      '/': (context) => const intro(),
-      '/ekrani/registracija': (context) => const RegistracijaEkran(),
-      '/ekrani/login': (context) => const login(),
-      '/ekrani/odabir': (context) => const odabir(),
-      '/ekrani/glavni_ekran': (context) => const glavni_ekran(),
-      '/ekrani/objava_oglasa': (context) => const ObjavaOglasa(),
-      '/ekrani/job_hub': (context) => const MojiPosloviHub(),
-      '/ekrani/moji_oglasi': (context) => const MojiOglasi(),
-      '/ekrani/korisnicki_profil': (context) => const KorisnickiProfil(),
-      '/ekrani/moje_prijave': (context) => const MojePrijaveEkran(),
-      '/ekrani/chat_hub': (context) => const ChatHub(),
-      '/ekrani/jednostavni_ekran': (context) => const JednostavniIzbornik(),
-
-    },
-  );
   }
 }
-

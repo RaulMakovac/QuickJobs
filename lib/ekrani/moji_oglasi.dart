@@ -15,7 +15,6 @@ class MojiOglasi extends StatefulWidget {
 class _MojiOglasiState extends State<MojiOglasi> {
   final supabase = Supabase.instance.client;
 
-  // DOHVAĆANJE I SORTIRANJE: Obavljeni poslovi idu na dno
   Future<List<Oglas>> dohvatiMojeOglase() async {
     final user = supabase.auth.currentUser;
     if (user == null) return [];
@@ -30,7 +29,6 @@ class _MojiOglasiState extends State<MojiOglasi> {
       final List data = response as List;
       List<Oglas> sviOglasi = data.map((json) => Oglas.fromJson(json)).toList();
 
-      // Prvo aktivni (otvoren, u_tijeku), pa obavljeni na dnu
       sviOglasi.sort((a, b) {
         if (a.status == 'obavljen' && b.status != 'obavljen') return 1;
         if (a.status != 'obavljen' && b.status == 'obavljen') return -1;
@@ -44,8 +42,7 @@ class _MojiOglasiState extends State<MojiOglasi> {
     }
   }
 
-  // LOGIKA: DIJALOG ZA OCJENJIVANJE
-  void _pokaziDijalogZaOcjenu(Oglas oglas) {
+  void _pokaziDijalogZaOcjenu(Oglas oglas, QuickJobsColors boje) {
     int odabranaOcjena = 5;
     final komentarController = TextEditingController();
 
@@ -55,12 +52,12 @@ class _MojiOglasiState extends State<MojiOglasi> {
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-          backgroundColor: const Color(0xFFE5D9D6),
-          title: const Text("Završi i ocijeni", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+          backgroundColor: boje.bg,
+          title: Text("Završi i ocijeni", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, color: boje.A)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("Ocijenite radnika za obavljeni posao:", textAlign: TextAlign.center),
+              Text("Ocijenite radnika za obavljeni posao:", textAlign: TextAlign.center, style: TextStyle(color: boje.A)),
               const SizedBox(height: 15),
               Wrap(
                 alignment: WrapAlignment.center,
@@ -80,10 +77,12 @@ class _MojiOglasiState extends State<MojiOglasi> {
               const SizedBox(height: 15),
               TextField(
                 controller: komentarController,
+                style: TextStyle(color: boje.A),
                 decoration: InputDecoration(
                   hintText: "Komentar (opcionalno)",
+                  hintStyle: TextStyle(color: boje.A?.withValues(alpha: 0.5)),
                   filled: true,
-                  fillColor: Colors.white24,
+                  fillColor: boje.C,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
                 ),
                 maxLines: 2,
@@ -91,14 +90,14 @@ class _MojiOglasiState extends State<MojiOglasi> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Odustani")),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text("Odustani", style: TextStyle(color: boje.A))),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4A2C29)),
+              style: ElevatedButton.styleFrom(backgroundColor: boje.A),
               onPressed: () {
                 Navigator.pop(context);
                 _spremiRecenzijuIZavrsi(oglas: oglas, ocjena: odabranaOcjena, komentar: komentarController.text);
               },
-              child: const Text("Spremi i završi", style: TextStyle(color: Colors.white)),
+              child: Text("Spremi i završi", style: TextStyle(color: boje.bg)),
             ),
           ],
         ),
@@ -106,29 +105,20 @@ class _MojiOglasiState extends State<MojiOglasi> {
     );
   }
 
-  // LOGIKA: REAKTIVACIJA OGLASA AKO DOGOVOR PROPADNE
   Future<void> _reaktivirajOglas(String oglasId, String? stariObavljacId) async {
     try {
-      debugPrint("Započeta reaktivacija. Oglas: $oglasId, Radnik za brisanje: $stariObavljacId");
-
       if (stariObavljacId != null) {
-        // 1. Arhiviranje chata
         await supabase
             .from('chat_sobe')
             .update({'status': 'arhivirano'})
             .eq('oglas_id', oglasId);
-        debugPrint("Chat soba arhivirana.");
-
       }
 
-      // 3. Vraćanje oglasa u početno stanje
       await supabase.from('oglasi').update({
         'status_oglasa': 'otvoren',
         'obavljac_id': null,
       }).eq('id', oglasId);
       
-      debugPrint("Oglas uspješno vraćen na status 'otvoren' i obavljac_id na null.");
-
       if (mounted) {
         setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
@@ -136,34 +126,33 @@ class _MojiOglasiState extends State<MojiOglasi> {
         );
       }
     } catch (e) {
-      debugPrint("KATASTROFA pri reaktivaciji: $e");
+      debugPrint("Greška pri reaktivaciji: $e");
     }
   }
 
-  // DIJALOG ZA POTVRDU REACTIVACIJE
-  void _potvrdiReaktivaciju(Oglas oglas) {
+  void _potvrdiReaktivaciju(Oglas oglas, QuickJobsColors boje) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: boje.bg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        title: const Text("Ponovna objava"),
-        content: Text("Sigurno želite otkazati trenutnog radnika i ponovno otvoriti oglas '${oglas.naslov}' za nove prijave?"),
+        title: Text("Ponovna objava", style: TextStyle(color: boje.A)),
+        content: Text("Sigurno želite otkazati trenutnog radnika i ponovno otvoriti oglas '${oglas.naslov}' za nove prijave?", style: TextStyle(color: boje.A)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Ne")),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text("Ne", style: TextStyle(color: boje.A))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4A2C29)),
+            style: ElevatedButton.styleFrom(backgroundColor: boje.A),
             onPressed: () { 
               Navigator.pop(context); 
               _reaktivirajOglas(oglas.id, oglas.obavljacId);
             }, 
-            child: const Text("Da, objavi ponovno", style: TextStyle(color: Colors.white))
+            child: Text("Da, objavi ponovno", style: TextStyle(color: boje.bg))
           ),
         ],
       ),
     );
   }
 
-  // LOGIKA: ZAKLJUČIVANJE POSLA (Oglas tek tu postaje 'obavljen')
   Future<void> _spremiRecenzijuIZavrsi({required Oglas oglas, required int ocjena, String? komentar}) async {
     try {
       final user = supabase.auth.currentUser;
@@ -187,7 +176,6 @@ class _MojiOglasiState extends State<MojiOglasi> {
     }
   }
 
-  // LOGIKA: TRAJNO BRISANJE IZ BAZE
   Future<void> _trajnoObrisiOglas(String id) async {
     try {
       await supabase.from('oglasi').delete().eq('id', id);
@@ -197,14 +185,15 @@ class _MojiOglasiState extends State<MojiOglasi> {
     }
   }
 
-  void _potvrdiBrisanje(Oglas oglas) {
+  void _potvrdiBrisanje(Oglas oglas, QuickJobsColors boje) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Trajno brisanje"),
-        content: Text("Jeste li sigurni da želite trajno obrisati oglas '${oglas.naslov}' iz baze podataka?"),
+        backgroundColor: boje.bg,
+        title: Text("Trajno brisanje", style: TextStyle(color: boje.A)),
+        content: Text("Jeste li sigurni da želite trajno obrisati oglas '${oglas.naslov}' iz baze podataka?", style: TextStyle(color: boje.A)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Ne")),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text("Ne", style: TextStyle(color: boje.A))),
           TextButton(
             onPressed: () { 
               Navigator.pop(context); 
@@ -219,24 +208,31 @@ class _MojiOglasiState extends State<MojiOglasi> {
 
   @override
   Widget build(BuildContext context) {
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFE5D9D6),
+      backgroundColor: boje.bg,
       body: PozadinaKrugovi(
+        krugBoja: boje.C,
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(),
+              _buildHeader(boje),
               Expanded(
                 child: FutureBuilder<List<Oglas>>(
                   future: dohvatiMojeOglase(),
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator(color: boje.A));
+                    }
                     final oglasi = snapshot.data ?? [];
-                    if (oglasi.isEmpty) return const Center(child: Text("Nema oglasa."));
+                    if (oglasi.isEmpty) {
+                      return Center(child: Text("Nema oglasa.", style: TextStyle(color: boje.A)));
+                    }
                     return ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       itemCount: oglasi.length,
-                      itemBuilder: (context, index) => _buildMojOglasCard(oglasi[index]),
+                      itemBuilder: (context, index) => _buildMojOglasCard(oglasi[index], boje),
                     );
                   },
                 ),
@@ -248,20 +244,20 @@ class _MojiOglasiState extends State<MojiOglasi> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(QuickJobsColors boje) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 20, 20, 20), 
       child: Row(
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios_new, size: 26, color: Color(0xFF4A2C29)),
+            icon: Icon(Icons.arrow_back_ios_new, size: 26, color: boje.A),
           ),
-          const Expanded(
+          Expanded(
             child: Text(
               "Moji oglasi", 
               textAlign: TextAlign.center, 
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF4A2C29)),
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: boje.A),
             ),
           ),
           const SizedBox(width: 48), 
@@ -270,7 +266,7 @@ class _MojiOglasiState extends State<MojiOglasi> {
     );
   }
 
-  Widget _buildMojOglasCard(Oglas oglas) {
+  Widget _buildMojOglasCard(Oglas oglas, QuickJobsColors boje) {
     bool imaRadnika = oglas.obavljacId != null;
     bool jeZavrsen = oglas.status == 'obavljen';
     
@@ -285,9 +281,9 @@ class _MojiOglasiState extends State<MojiOglasi> {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: jeZavrsen ? Colors.grey[400] : const Color(0xFF8F6E68),
+          color: jeZavrsen ? boje.B : boje.C,
           borderRadius: BorderRadius.circular(30),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10)],
         ),
         child: Column(
           children: [
@@ -297,9 +293,9 @@ class _MojiOglasiState extends State<MojiOglasi> {
                   clipBehavior: Clip.none,
                   children: [
                     CircleAvatar(
-                      backgroundColor: Colors.white24,
+                      backgroundColor: boje.bg?.withValues(alpha: 0.3),
                       radius: 22,
-                      child: Icon(ikonaKategorije, color: Colors.black87, size: 24),
+                      child: Icon(ikonaKategorije, color: boje.A, size: 24),
                     ),
                     if (jeZavrsen || imaRadnika)
                       Positioned(
@@ -307,10 +303,10 @@ class _MojiOglasiState extends State<MojiOglasi> {
                         right: -2,
                         child: Container(
                           padding: const EdgeInsets.all(2),
-                          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                          decoration: BoxDecoration(color: boje.bg, shape: BoxShape.circle),
                           child: Icon(
                             jeZavrsen ? Icons.check_circle : Icons.engineering,
-                            color: jeZavrsen ? Colors.grey[700] : Colors.orange[800],
+                            color: jeZavrsen ? boje.A : Colors.orange[800],
                             size: 16,
                           ),
                         ),
@@ -322,18 +318,18 @@ class _MojiOglasiState extends State<MojiOglasi> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(oglas.naslov, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(oglas.naslov, style: TextStyle(color: boje.A, fontWeight: FontWeight.bold, fontSize: 18), maxLines: 1, overflow: TextOverflow.ellipsis),
                       Text(
                         jeZavrsen ? "Posao uspješno završen" : (imaRadnika ? "Radnik odabran" : "Tražim radnika..."), 
-                        style: const TextStyle(color: Colors.white70, fontSize: 13)
+                        style: TextStyle(color: boje.A?.withValues(alpha: 0.7), fontSize: 13)
                       ),
                     ],
                   ),
                 ),
-                Text("${oglas.isplata}€", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                Text("${oglas.isplata}€", style: TextStyle(color: boje.A, fontWeight: FontWeight.bold, fontSize: 18)),
               ],
             ),
-            const Divider(color: Colors.white24, height: 30),
+            Divider(color: boje.A?.withValues(alpha: 0.2), height: 30),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -341,8 +337,8 @@ class _MojiOglasiState extends State<MojiOglasi> {
                   children: [
                     if (mozeSeObrisati)
                       IconButton(
-                        onPressed: () => _potvrdiBrisanje(oglas), 
-                        icon: Icon(Icons.delete_outline, color: jeZavrsen ? Colors.red[900] : const Color(0xFF4A2C29))
+                        onPressed: () => _potvrdiBrisanje(oglas, boje), 
+                        icon: Icon(Icons.delete_outline, color: jeZavrsen ? Colors.red[900] : boje.A)
                       ),
                     if (mozeSeUrediti)
                       IconButton(
@@ -350,7 +346,7 @@ class _MojiOglasiState extends State<MojiOglasi> {
                           final osvjezi = await Navigator.push(context, MaterialPageRoute(builder: (context) => AzurirajOglas(oglas: oglas)));
                           if (osvjezi == true) setState(() {});
                         },
-                        icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                        icon: Icon(Icons.edit_outlined, color: boje.A),
                       ),
                   ],
                 ),
@@ -359,8 +355,8 @@ class _MojiOglasiState extends State<MojiOglasi> {
                     children: [
                       if (imaRadnika) ...[
                         IconButton(
-                          onPressed: () => _potvrdiReaktivaciju(oglas),
-                          icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 28),
+                          onPressed: () => _potvrdiReaktivaciju(oglas, boje),
+                          icon: Icon(Icons.refresh_rounded, color: boje.A, size: 28),
                           tooltip: "Ponovno objavi oglas",
                         ),
                         const SizedBox(width: 4), 
@@ -368,20 +364,19 @@ class _MojiOglasiState extends State<MojiOglasi> {
                       ElevatedButton(
                         onPressed: () async {
                           if (imaRadnika) {
-                            _pokaziDijalogZaOcjenu(oglas);
+                            _pokaziDijalogZaOcjenu(oglas, boje);
                           } else {
-                            // POZIV EKRANA ZA ZAPOŠLJAVANJE
                             final osvjezi = await Navigator.push(
                               context, 
                               MaterialPageRoute(builder: (context) => Zaposli(oglas: oglas))
                             );
                             if (osvjezi == true) {
                               if (mounted) {
-                                setState(() {}); // Osvježava listu oglasa na ekranu
+                                setState(() {});
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Radnik je uspješno prihvaćen!"),
-                                    backgroundColor: Color(0xFF4A2C29),
+                                  SnackBar(
+                                    content: const Text("Radnik je uspješno prihvaćen!"),
+                                    backgroundColor: boje.A,
                                   ),
                                 );
                               }
@@ -389,22 +384,25 @@ class _MojiOglasiState extends State<MojiOglasi> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: imaRadnika ? Colors.orange[700] : Colors.white, 
+                          backgroundColor: imaRadnika ? Colors.orange[700] : boje.bg, 
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
                         ),
-                        child: Text(imaRadnika ? "ZAVRŠI POSAO" : "VIDI PRIJAVE", style: TextStyle(color: imaRadnika ? Colors.white : Colors.black)),
+                        child: Text(
+                          imaRadnika ? "ZAVRŠI POSAO" : "VIDI PRIJAVE", 
+                          style: TextStyle(color: imaRadnika ? Colors.white : boje.A)
+                        ),
                       ),
                       if (imaRadnika) ...[
                         const SizedBox(width: 4),
                         IconButton(
                           onPressed: () => Navigator.pushNamed(context, '/ekrani/chat_hub'), 
-                          icon: const Icon(Icons.forum_rounded, color: Colors.white)
+                          icon: Icon(Icons.forum_rounded, color: boje.A)
                         ),
                       ],
                     ],
                   ),
                 ] else
-                  const Text("ZAVRŠENO", style: TextStyle(color: Colors.black45, fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text("ZAVRŠENO", style: TextStyle(color: boje.A?.withValues(alpha: 0.5), fontWeight: FontWeight.bold, fontSize: 13)),
               ],
             ),
           ],
@@ -413,5 +411,3 @@ class _MojiOglasiState extends State<MojiOglasi> {
     );
   }
 }
-
-

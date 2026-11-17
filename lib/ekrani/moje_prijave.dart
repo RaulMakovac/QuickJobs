@@ -37,7 +37,6 @@ class MojePrijaveEkran extends StatefulWidget {
 class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
   final supabase = Supabase.instance.client;
 
-  // 1. DOHVAĆANJE PRIJAVA BEZ ALIASA
   Future<List<Prijava>> _dohvatiMojePrijave() async {
     final user = supabase.auth.currentUser;
     if (user == null) return [];
@@ -71,7 +70,6 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
     }
   }
 
-  // 2. LOGIKA ZA OCJENJIVANJE I BRISANJE PRIJAVE NA KRAJU POSLA
   Future<void> _spremiRecenzijuAutora({
     required Prijava prijava,
     required int ocjena,
@@ -87,7 +85,6 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
         throw "Greška: ID autora nije pronađen.";
       }
 
-      // A) Prvo spremi recenziju
       await supabase.from('recenzije').insert({
         'oglas_id': oglas.id,
         'ocjenjivac_id': user.id,
@@ -97,11 +94,10 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
         'komentar': komentar,
       });
 
-      // B) Zatim obriši prijavu da se onemogući ponovno ocjenjivanje
       await supabase.from('prijave').delete().eq('id', prijava.id);
 
       if (mounted) {
-        setState(() {}); // Osvježi listu
+        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.green,
@@ -112,15 +108,12 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
     } catch (e) {
       debugPrint("Greška pri recenziranju: $e");
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Greška: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Greška: $e")));
       }
     }
   }
 
-  // DIJALOG ZA OCJENU - Prima 'prijava' objekt
-  void _pokaziDijalogZaOcjenuAutora(Prijava prijava) {
+  void _pokaziDijalogZaOcjenuAutora(Prijava prijava, QuickJobsColors boje) {
     int odabranaOcjena = 5;
     final komentarController = TextEditingController();
 
@@ -129,16 +122,16 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
       barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text("Ocijeni poslodavca", textAlign: TextAlign.center),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          backgroundColor: boje.bg,
+          title: Text("Ocijeni poslodavca", textAlign: TextAlign.center, style: TextStyle(color: boje.A)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 "Kako ste zadovoljni suradnjom na oglasu:\n'${prijava.oglas.naslov}'?",
                 textAlign: TextAlign.center,
+                style: TextStyle(color: boje.A),
               ),
               const SizedBox(height: 15),
               Row(
@@ -150,19 +143,20 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                       color: Colors.orange,
                       size: 35,
                     ),
-                    onPressed: () =>
-                        setDialogState(() => odabranaOcjena = index + 1),
+                    onPressed: () => setDialogState(() => odabranaOcjena = index + 1),
                   );
                 }),
               ),
               const SizedBox(height: 10),
               TextField(
                 controller: komentarController,
+                style: TextStyle(color: boje.A),
                 decoration: InputDecoration(
                   hintText: "Napišite iskustvo...",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  hintStyle: TextStyle(color: boje.A?.withValues(alpha: 0.5)),
+                  filled: true,
+                  fillColor: boje.bg,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 maxLines: 2,
               ),
@@ -171,12 +165,10 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Odustani"),
+              child: Text("Odustani", style: TextStyle(color: boje.A)),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4A2C29),
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: boje.A),
               onPressed: () {
                 Navigator.pop(context);
                 _spremiRecenzijuAutora(
@@ -185,10 +177,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                   komentar: komentarController.text,
                 );
               },
-              child: const Text(
-                "Spremi",
-                style: TextStyle(color: Colors.white),
-              ),
+              child: Text("Spremi", style: TextStyle(color: boje.bg)),
             ),
           ],
         ),
@@ -201,35 +190,29 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
       final trenutniKorisnikId = supabase.auth.currentUser?.id;
       if (trenutniKorisnikId == null) return;
 
-      // 1. Ako je radnik već bio prihvaćen, oslobađam oglas postavljanjem obavljac_id na null
       if (zaposlenSam) {
         await supabase
             .from('oglasi')
             .update({
               'obavljac_id': null,
-              'status_oglasa':
-                  'otvoren', 
+              'status_oglasa': 'otvoren', 
             })
             .eq('id', prijava.oglasId);
       }
 
-      // 2. ARHIVIRANJE CHAT SOBE
-      // Pronalazimo sobu za ovaj oglas gdje je trenutni korisnik radnik i gasimo je
       await supabase
           .from('chat_sobe')
           .update({
-            'status': 'arhivirano', // Prebacujemo iz 'aktivno' u 'arhivirano'
-            'updated_at': DateTime.now()
-                .toIso8601String(), // Čisto da osvježi timestamp
+            'status': 'arhivirano',
+            'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('oglas_id', prijava.oglasId)
           .eq('radnik_id', trenutniKorisnikId);
 
-      // 3. Brišemo samu prijavu iz tablice 'prijave'
       await supabase.from('prijave').delete().eq('id', prijava.id);
 
       if (mounted) {
-        setState(() {}); // Osvježavanje liste na ekranu
+        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: zaposlenSam ? Colors.orange : Colors.green,
@@ -256,40 +239,39 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
 
   @override
   Widget build(BuildContext context) {
-    const darkBrown = Color(0xFF4A2C29);
-    const bgColor = Color(0xFFE5D9D6);
-    const cardColor = Color(0xFF8F6E68);
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: boje.bg,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Moje prijave",
-          style: TextStyle(color: darkBrown, fontWeight: FontWeight.bold),
+          style: TextStyle(color: boje.A, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: darkBrown),
+        iconTheme: IconThemeData(color: boje.A),
       ),
       body: PozadinaKrugovi(
+        krugBoja: boje.C,
         child: SafeArea(
           child: FutureBuilder<List<Prijava>>(
             future: _dohvatiMojePrijave(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(color: darkBrown),
+                return Center(
+                  child: CircularProgressIndicator(color: boje.A),
                 );
               }
 
               final prijave = snapshot.data ?? [];
               if (prijave.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
                     "Nema aktivnih prijava.",
                     style: TextStyle(
-                      color: darkBrown,
+                      color: boje.A,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -310,22 +292,18 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                   bool zaposlenSam = oglas.obavljacId == user?.id;
                   bool jeZavrseno = oglas.status == 'obavljen';
 
-                  final ikonaPosla =
-                      kategorijeSaIkonama[oglas.kategorija] ??
-                      Icons.hourglass_top;
+                  final ikonaPosla = kategorijeSaIkonama[oglas.kategorija] ?? Icons.hourglass_top;
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 15),
                     decoration: BoxDecoration(
                       color: zaposlenSam
-                          ? (jeZavrseno
-                                ? Colors.grey[400]
-                                : const Color(0xFF6B8E23))
-                          : cardColor,
+                          ? (jeZavrseno ? boje.B : Colors.green[700])
+                          : boje.C,
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -334,33 +312,30 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                     child: ListTile(
                       contentPadding: const EdgeInsets.all(15),
                       leading: CircleAvatar(
-                        backgroundColor: Colors.white24,
+                        backgroundColor: boje.bg?.withValues(alpha: 0.3),
                         child: Icon(
                           jeZavrseno
                               ? Icons.done_all
                               : (zaposlenSam ? Icons.celebration : ikonaPosla),
-                          color: Colors.white,
+                          color: boje.A,
                         ),
                       ),
                       title: Text(
                         oglas.naslov,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: boje.A,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       subtitle: Text(
                         jeZavrseno
                             ? "Posao završen"
-                            : (zaposlenSam
-                                  ? "PRIHVAĆENI STE!"
-                                  : "Na čekanju..."),
-                        style: const TextStyle(color: Colors.white70),
+                            : (zaposlenSam ? "PRIHVAĆENI STE!" : "Na čekanju..."),
+                        style: TextStyle(color: boje.A?.withValues(alpha: 0.7)),
                       ),
                       trailing: (jeZavrseno && zaposlenSam)
                           ? ElevatedButton(
-                              onPressed: () =>
-                                  _pokaziDijalogZaOcjenuAutora(prijava),
+                              onPressed: () => _pokaziDijalogZaOcjenuAutora(prijava, boje),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.orange,
                                 elevation: 0,
@@ -376,12 +351,13 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                                 ),
                               ),
                             )
-                          : const Icon(Icons.info_outline, color: Colors.white),
+                          : Icon(Icons.info_outline, color: boje.A),
                       onTap: () => _prikaziUpravljanjePrijavom(
                         context,
                         prijava,
                         zaposlenSam,
                         jeZavrseno,
+                        boje,
                       ),
                     ),
                   );
@@ -394,20 +370,20 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
     );
   }
 
-  // 4. PREPRAVLJENI MODAL KOJI SADA PODRŽAVA ODJAVU S AKTIVNOG POSLA
   void _prikaziUpravljanjePrijavom(
     BuildContext context,
     Prijava prijava,
     bool zaposlenSam,
     bool jeZavrseno,
+    QuickJobsColors boje,
   ) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFFE5D9D6),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        decoration: BoxDecoration(
+          color: boje.bg,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         ),
         padding: const EdgeInsets.all(25),
         child: Column(
@@ -417,8 +393,7 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
               onTap: () async {
                 var oglasZaPrikaz = prijava.oglas;
 
-                if (oglasZaPrikaz.autorIme == null ||
-                    oglasZaPrikaz.autorIme == 'Nepoznat autor') {
+                if (oglasZaPrikaz.autorIme == null || oglasZaPrikaz.autorIme == 'Nepoznat autor') {
                   final data = await supabase
                       .from('profiles')
                       .select('puno_ime')
@@ -450,47 +425,43 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
                   Text(
                     prijava.oglas.naslov,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF4A2C29),
+                      color: boje.A,
                     ),
                   ),
                   const SizedBox(height: 5),
-                  const Text(
+                  Text(
                     "Dodirni za detalje oglasa",
-                    style: TextStyle(fontSize: 12, color: Colors.black45),
+                    style: TextStyle(fontSize: 12, color: boje.A?.withValues(alpha: 0.5)),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 25),
-
             if (zaposlenSam && !jeZavrseno)
-              const Text(
+              Text(
                 "Odabrani ste! Poslodavac će vas uskoro kontaktirati.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontWeight: FontWeight.w500,
-                  color: Colors.black,
+                  color: boje.A,
                 ),
               ),
-
             const SizedBox(height: 25),
-
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
+                      backgroundColor: boje.C,
+                      foregroundColor: boje.A,
                     ),
                     onPressed: () => Navigator.pop(context),
                     child: const Text("Zatvori"),
                   ),
                 ),
-                // Gumb se prikazuje uvijek, OSIM ako je posao već skroz završen i arhiviran
                 if (!jeZavrseno) ...[
                   const SizedBox(width: 10),
                   Expanded(

@@ -6,30 +6,30 @@ import '../dekor.dart';
 class MojiPosloviHub extends StatelessWidget {
   const MojiPosloviHub({super.key});
 
-  static const bgColor = Color(0xFFE5D9D6);
-  static const darkBrown = Color(0xFF4A2C29);
-  static const cardColor = Color(0xFF8F6E68);
-
   @override
   Widget build(BuildContext context) {
+    // Dohvaćamo definirane boje iz dekor.dart
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
+
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: boje.bg,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         // AppBar mora ostati transparentan da ne prekrije gornji krug
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: darkBrown),
+          icon: Icon(Icons.arrow_back_ios_new, color: boje.A),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           "Moji poslovi",
-          style: TextStyle(color: darkBrown, fontWeight: FontWeight.bold, fontSize: 22),
+          style: TextStyle(color: boje.A, fontWeight: FontWeight.bold, fontSize: 22),
         ),
         centerTitle: true,
       ),
       body: PozadinaKrugovi(
+        krugBoja: boje.C,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 25.0),
@@ -41,6 +41,7 @@ class MojiPosloviHub extends StatelessWidget {
                   title: "Moji objavljeni oglasi",
                   subtitle: "Upravljaj poslovima koje si objavio",
                   icon: Icons.list_alt_rounded,
+                  boje: boje,
                   onTap: () => Navigator.push(
                     context, 
                     MaterialPageRoute(builder: (context) => const MojiOglasi())
@@ -52,6 +53,7 @@ class MojiPosloviHub extends StatelessWidget {
                   title: "Moje prijave",
                   subtitle: "Status poslova na koje si se prijavio",
                   icon: Icons.assignment_turned_in_rounded,
+                  boje: boje,
                   onTap: () => Navigator.push(
                     context, 
                     MaterialPageRoute(builder: (context) => const MojePrijaveEkran())
@@ -71,6 +73,7 @@ class MojiPosloviHub extends StatelessWidget {
     required String title,
     required String subtitle,
     required IconData icon,
+    required QuickJobsColors boje,
     required VoidCallback onTap,
   }) {
     return InkWell(
@@ -80,7 +83,7 @@ class MojiPosloviHub extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: cardColor,
+          color: boje.C,
           borderRadius: BorderRadius.circular(25),
           boxShadow: [
             BoxShadow(
@@ -95,10 +98,10 @@ class MojiPosloviHub extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: boje.A!.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 32, color: Colors.white),
+              child: Icon(icon, size: 32, color: boje.A),
             ),
             const SizedBox(width: 20),
             Expanded(
@@ -107,8 +110,8 @@ class MojiPosloviHub extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: boje.A,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -117,14 +120,14 @@ class MojiPosloviHub extends StatelessWidget {
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
+                      color: boje.A?.withValues(alpha: 0.8),
                       fontSize: 13,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, color: Colors.white70, size: 18),
+            Icon(Icons.arrow_forward_ios, color: boje.A?.withValues(alpha: 0.7), size: 18),
           ],
         ),
       ),

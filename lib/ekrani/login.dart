@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../dekor.dart'; // Uvoz centraliziranih boja i teme
 
 // DEFINICIJA SUPABASE KLIJENTA
 final supabase = Supabase.instance.client;
@@ -15,15 +16,7 @@ class _LoginState extends State<login> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
-  bool _passwordObscured = true; // DODANO: Stanje za sakrivanje/prikaz lozinke
-
-  // Boje usklađene s Registracijom
-  static const backgroundColor = Color(0xFFE5D9D6);
-  static const circleColor = Color(0xFFD6C8C5);
-  static const inputFieldColor = Color(0xFFD1BDB9);
-  static const darkBrownColor = Color(0xFF6D3F3A);
-  static const textColor = Color(0xFF2E2E2E);
-  static const hintTextColor = Color(0xFF8C5353);
+  bool _passwordObscured = true;
 
   // Funkcija za login na Supabase
   Future<void> _signIn() async {
@@ -37,47 +30,44 @@ class _LoginState extends State<login> {
     setState(() => _isLoading = true);
 
     try {
-  await supabase.auth.signInWithPassword(
-    email: _emailController.text.trim(),
-    password: _passwordController.text.trim(),
-  );
+      await supabase.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
-  if (mounted) {
-    Navigator.pushReplacementNamed(context, '/ekrani/glavni_ekran');
-  }
-} on AuthApiException catch (error) {
-  // Specifično hvatanje API grešaka (poput "Invalid login credentials")
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(error.message), 
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-} on AuthException catch (error) {
-  // Ostale općenite Supabase auth greške
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(error.message), 
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-} catch (error) {
-  // Sve ostalo van okvira authentifikacije
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(error.toString()),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-} finally {
-  if (mounted) setState(() => _isLoading = false);
-}
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/ekrani/glavni_ekran');
+      }
+    } on AuthApiException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.message), 
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } on AuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.message), 
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -89,157 +79,143 @@ class _LoginState extends State<login> {
 
   @override
   Widget build(BuildContext context) {
+    // Dohvaćamo definirane boje iz dekor.dart
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
+
     return Scaffold(
-      backgroundColor: backgroundColor,
-      body: Stack(
-        children: [
-          // POZADINSKI KRUGOVI - prvih par ekrana koristi built in umjesto dekor.dart krugova, problem za drugi dan ako se sjetim
-          Positioned(
-            top: -100,
-            right: -80,
-            child: CustomPaint(
-              size: const Size(250, 250),
-              painter: CirclePainter(color: circleColor),
-            ),
-          ),
-          Positioned(
-            bottom: -120,
-            left: -60,
-            child: CustomPaint(
-              size: const Size(280, 280),
-              painter: CirclePainter(color: circleColor),
-            ),
-          ),
-
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Gumb natrag
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(top: 16),
-                      child: IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new,
-                          size: 26,
-                          color: Color(0xFF4A2C29),
-                        ),
+      backgroundColor: boje.bg,
+      body: PozadinaKrugovi(
+        krugBoja: boje.C, // Koristi globalni sustav krugova
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Gumb natrag
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 16),
+                    child: IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(
+                        Icons.arrow_back_ios_new,
+                        size: 26,
+                        color: boje.A,
                       ),
                     ),
                   ),
+                ),
 
-                  const Spacer(flex: 1),
+                const Spacer(flex: 1),
 
-                  // NASLOV
-                  const Text(
-                    'Dobrodošli natrag',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: darkBrownColor,
+                // NASLOV
+                Text(
+                  'Dobrodošli natrag',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: boje.A,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Prijavite se u svoj QuickJobs račun',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: boje.A),
+                ),
+
+                const SizedBox(height: 48),
+
+                // INPUT POLJA
+                _buildInputField(
+                  _emailController,
+                  'E-mail adresa',
+                  Icons.email,
+                  boje,
+                  isEmail: true,
+                ),
+                const SizedBox(height: 16),
+                _buildInputField(
+                  _passwordController,
+                  'Lozinka',
+                  Icons.lock,
+                  boje,
+                  isPassword: true,
+                ),
+
+                const SizedBox(height: 12),
+
+                // Zaboravljena lozinka
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {}, 
+                    child: Text(
+                      'Zaboravili ste lozinku?',
+                      style: TextStyle(color: boje.A),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Prijavite se u svoj QuickJobs račun',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: textColor),
-                  ),
+                ),
 
-                  const SizedBox(height: 48),
+                const SizedBox(height: 32),
 
-                  // INPUT POLJA
-                  _buildInputField(
-                    _emailController,
-                    'E-mail adresa',
-                    Icons.email,
-                    isEmail: true,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildInputField(
-                    _passwordController,
-                    'Lozinka',
-                    Icons.lock,
-                    isPassword: true,
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Zaboravljena lozinka
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {}, // Ovdje ide reset lozinke kasnije (treba napravit 2FA reset password flow)
-                      child: const Text(
-                        'Zaboravili ste lozinku?',
-                        style: TextStyle(color: darkBrownColor),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // GUMB ZA PRIJAVU
-                  _isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: darkBrownColor,
-                          ),
-                        )
-                      : ElevatedButton(
-                          onPressed: _signIn,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: darkBrownColor,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size(double.infinity, 60),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            elevation: 4,
-                          ),
-                          child: const Text(
-                            'Prijava',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                // GUMB ZA PRIJAVU
+                _isLoading
+                    ? Center(
+                        child: CircularProgressIndicator(
+                          color: boje.A,
                         ),
-
-                  const Spacer(flex: 2),
-
-                  // Link na registraciju
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('Nemate račun?'),
-                      TextButton(
-                        onPressed: () => Navigator.pushNamed(
-                          context,
-                          '/ekrani/registracija',
+                      )
+                    : ElevatedButton(
+                        onPressed: _signIn,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: boje.A,
+                          foregroundColor: boje.bg,
+                          minimumSize: const Size(double.infinity, 60),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          elevation: 4,
                         ),
                         child: const Text(
-                          'Registrirajte se',
+                          'Prijava',
                           style: TextStyle(
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: darkBrownColor,
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
+
+                const Spacer(flex: 2),
+
+                // Link na registraciju
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Nemate račun?', style: TextStyle(color: boje.A)),
+                    TextButton(
+                      onPressed: () => Navigator.pushNamed(
+                        context,
+                        '/ekrani/registracija',
+                      ),
+                      child: Text(
+                        'Registrirajte se',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: boje.A,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -247,31 +223,36 @@ class _LoginState extends State<login> {
   Widget _buildInputField(
     TextEditingController controller,
     String hintText,
-    IconData icon, {
+    IconData icon,
+    QuickJobsColors boje, {
     bool isPassword = false,
     bool isEmail = false,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: inputFieldColor,
+        color: boje.C,
         borderRadius: BorderRadius.circular(20),
       ),
       child: TextField(
         controller: controller,
-        // Ako je polje za lozinku, kontrolira se sakrivanje preko stanja _passwordObscured
         obscureText: isPassword ? _passwordObscured : false,
         keyboardType: isEmail ? TextInputType.emailAddress : TextInputType.text,
-        style: const TextStyle(color: textColor),
+        style: TextStyle(color: boje.A, fontSize: 16),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(color: hintTextColor),
-          prefixIcon: Icon(icon, color: hintTextColor),
-          // EXTRA: Ako je lozinka, dodajemo interaktivno oko na kraj polja DODAT NA REGISTER
+          hintStyle: TextStyle(
+            color: boje.A?.withValues(alpha: 0.65),
+            fontSize: 16,
+          ),
+          prefixIcon: Icon(
+            icon, 
+            color: boje.A?.withValues(alpha: 0.75),
+          ),
           suffixIcon: isPassword
               ? IconButton(
                   icon: Icon(
                     _passwordObscured ? Icons.visibility_off : Icons.visibility,
-                    color: hintTextColor,
+                    color: boje.A?.withValues(alpha: 0.75),
                   ),
                   onPressed: () {
                     setState(() {
@@ -289,23 +270,4 @@ class _LoginState extends State<login> {
       ),
     );
   }
-}
-
-class CirclePainter extends CustomPainter {
-  final Color color;
-  CirclePainter({required this.color});
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(
-      Offset(size.width / 2, size.height / 2),
-      size.width / 2,
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

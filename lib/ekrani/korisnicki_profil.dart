@@ -55,11 +55,6 @@ class KorisnickiProfil extends StatefulWidget {
 class _KorisnickiProfilState extends State<KorisnickiProfil> {
   final supabase = Supabase.instance.client;
 
-  static const bgColor = Color(0xFFE5D9D6);
-  static const darkBrown = Color(0xFF4A2C29);
-  static const cardColor = Color(0xFF8F6E68);
-  static const inputBg = Color(0xFFD1BDB9);
-
   bool get jeLiMojProfil {
     final trenutniUser = supabase.auth.currentUser;
     if (widget.prikazaniKorisnikId == null) return true;
@@ -78,7 +73,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
   bool _isLoading = true;
   bool _prikaziSveRecenzije = false;
   double _prosjecnaOcjena = 0.0;
-  String _tekstOcjene = ""; //ne znam zašto piše da se ne koristi doslovno se koristi u buildu al whatever
+  String _tekstOcjene = ""; 
   List<Oglas> _mojiOglasi = [];
   List<Recenzija> _recenzije = [];
 
@@ -138,7 +133,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
           .select('''
         *,
         ocjenjivac:profiles!recenzije_ocjenjivac_id_fkey(puno_ime),
-        oglasi!recenzije_oglas_id_fkey(naslov_oglasa, kategorija) -- Povlačimo i kategoriju za ikonu
+        oglasi!recenzije_oglas_id_fkey(naslov_oglasa, kategorija)
       ''')
           .eq('ocijenjeni_id', ciljaniUserId)
           .order('created_at', ascending: false);
@@ -191,21 +186,21 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
     }
   }
 
-  void _odjava() async {
+  void _odjava(QuickJobsColors boje) async {
     bool? potvrda = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: bgColor,
+        backgroundColor: boje.bg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
+        title: Text(
           "Odjava",
-          style: TextStyle(color: darkBrown, fontWeight: FontWeight.bold),
+          style: TextStyle(color: boje.A, fontWeight: FontWeight.bold),
         ),
-        content: const Text("Jeste li sigurni da se želite odjaviti?"),
+        content: Text("Jeste li sigurni da se želite odjaviti?", style: TextStyle(color: boje.A)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Odustani"),
+            child: Text("Odustani", style: TextStyle(color: boje.A)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -224,21 +219,26 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
         Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
     }
   }
-//dok se loada je prazno
+
   @override
   Widget build(BuildContext context) {
+    // Dohvaćamo definirane boje iz dekor.dart
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
+
     if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: bgColor,
+      return Scaffold(
+        backgroundColor: boje.bg,
         body: PozadinaKrugovi(
-          child: Center(child: CircularProgressIndicator(color: darkBrown)),
+          krugBoja: boje.C,
+          child: Center(child: CircularProgressIndicator(color: boje.A)),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: boje.bg,
       body: PozadinaKrugovi(
+        krugBoja: boje.C,
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
@@ -259,9 +259,9 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                             children: [
                               IconButton(
                                 onPressed: () => Navigator.pop(context),
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.arrow_back_ios_new,
-                                  color: darkBrown,
+                                  color: boje.A,
                                   size: 26,
                                 ),
                               ),
@@ -285,12 +285,12 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                                         _isEditing
                                             ? Icons.cancel_rounded
                                             : Icons.edit_rounded,
-                                        color: darkBrown,
+                                        color: boje.A,
                                         size: 26,
                                       ),
                                     ),
                                     IconButton(
-                                      onPressed: _odjava,
+                                      onPressed: () => _odjava(boje),
                                       icon: const Icon(
                                         Icons.logout_rounded,
                                         color: Colors.redAccent,
@@ -317,6 +317,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                                             _prikaziDijalogZaReportProfila(
                                               context,
                                               ciljaniUserId,
+                                              boje,
                                             ),
                                       );
                                     }
@@ -327,37 +328,38 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                           ),
                         ),
 
-                        _buildUserHeader(),
+                        _buildUserHeader(boje),
                         const SizedBox(height: 25),
                         _buildEditableField(
                           "Ime i prezime:",
                           _imeController,
                           Icons.person_outline_rounded,
+                          boje,
                         ),
                         _buildEditableField(
                           "E-mail adresa:",
                           _emailController,
                           Icons.mail_outline_rounded,
+                          boje,
                           enabled: false,
                         ),
                         _buildEditableField(
                           "Broj telefona:",
                           _telefonController,
                           Icons.phone_android_rounded,
+                          boje,
                         ),
-                        _buildAboutMeField(),
+                        _buildAboutMeField(boje),
 
                         // --- IZDANI POSLOVI ---
                         if (_mojiOglasi.isNotEmpty) ...[
                           const SizedBox(height: 25),
-                          _buildIzdaniPoslovi(),
+                          _buildIzdaniPoslovi(boje),
                         ],
 
                         // --- RECENZIJE ---
-                        if (_recenzije.isNotEmpty) ...[
-                          const SizedBox(height: 25),
-                          _buildRecenzijeSekcija(),
-                        ],
+                        const SizedBox(height: 25),
+                        _buildRecenzijeSekcija(boje),
 
                         const SizedBox(height: 10),
                       ],
@@ -372,61 +374,61 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
     );
   }
 
-  Widget _buildUserHeader() {
-  return Row(
-    children: [
-      const CircleAvatar(
-        radius: 35,
-        backgroundColor: cardColor,
-        child: Icon(Icons.person, size: 45, color: Colors.white),
-      ),
-      const SizedBox(width: 15),
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _imeController.text,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: darkBrown,
+  Widget _buildUserHeader(QuickJobsColors boje) {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 35,
+          backgroundColor: boje.C,
+          child: Icon(Icons.person, size: 45, color: boje.A),
+        ),
+        const SizedBox(width: 15),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _imeController.text,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: boje.A,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          _prosjecnaOcjena > 0 
-            ? Row(
-                children: [
-                  Text(
-                    _prosjecnaOcjena.toStringAsFixed(1),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: darkBrown,
+            const SizedBox(height: 4),
+            _prosjecnaOcjena > 0
+                ? Row(
+                    children: [
+                      Text(
+                        _prosjecnaOcjena.toStringAsFixed(1),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: boje.A,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.star_rounded, color: Colors.amber, size: 24),
+                    ],
+                  )
+                : Text(
+                    "Nema ocjena",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: boje.A?.withValues(alpha: 0.6),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.star_rounded, color: Colors.amber, size: 24),
-                ],
-              )
-            : const Text(
-                "Nema ocjena",
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: Colors.black54,
-                  
-                ),
-              ),
-        ],
-      ),
-    ],
-  );
-}
+          ],
+        ),
+      ],
+    );
+  }
 
   Widget _buildEditableField(
     String label,
     TextEditingController controller,
-    IconData ikona, {
+    IconData ikona,
+    QuickJobsColors boje, {
     bool enabled = true,
   }) {
     bool mozeEditirati = jeLiMojProfil && _isEditing && enabled;
@@ -437,9 +439,9 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: const BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: boje.B, // Mali pravokutnik koristi boju C
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(8),
                 topRight: Radius.circular(8),
               ),
@@ -449,14 +451,14 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
               children: [
                 Icon(
                   ikona,
-                  color: Colors.white,
+                  color: boje.A,
                   size: 14,
                 ), 
                 const SizedBox(width: 6),
                 Text(
                   label,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: boje.A,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -467,22 +469,26 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
           TextField(
             controller: controller,
             enabled: mozeEditirati,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: darkBrown,
+              color: boje.A,
             ),
             decoration: InputDecoration(
               filled: true,
-              fillColor: inputBg,
+              fillColor: boje.C,
               isDense: true,
               contentPadding: const EdgeInsets.all(12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(10),
+                  bottomLeft: Radius.circular(10),
+                  bottomRight: Radius.circular(10),
+                ),
                 borderSide: BorderSide.none,
               ),
               suffixIcon: mozeEditirati
-                  ? const Icon(Icons.edit, size: 16, color: darkBrown)
+                  ? Icon(Icons.edit, size: 16, color: boje.A)
                   : null,
             ),
           ),
@@ -491,7 +497,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
     );
   }
 
-  Widget _buildAboutMeField() {
+  Widget _buildAboutMeField(QuickJobsColors boje) {
     bool mozeEditirati = jeLiMojProfil && _isEditing;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -500,22 +506,22 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: const BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: boje.B, // Mali pravokutnik koristi boju C
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(8),
                 topRight: Radius.circular(8),
               ),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.description_outlined, color: Colors.white, size: 14),
+                Icon(Icons.description_outlined, color: boje.A, size: 14),
                 const SizedBox(width: 6),
                 Text(
                   "Opis profila",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: boje.A,
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                   ),
@@ -527,18 +533,18 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
             controller: _opisController,
             enabled: mozeEditirati,
             maxLines: 4,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: darkBrown,
+              color: boje.A,
               fontWeight: FontWeight.w500,
             ),
             decoration: InputDecoration(
               filled: true,
-              fillColor: inputBg,
+              fillColor: boje.C,
               isDense: true,
               contentPadding: const EdgeInsets.all(12),
-              border: OutlineInputBorder(
-                borderRadius: const BorderRadius.only(
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(10),
                   bottomRight: Radius.circular(10),
                   topRight: Radius.circular(10),
@@ -546,7 +552,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                 borderSide: BorderSide.none,
               ),
               suffixIcon: mozeEditirati
-                  ? const Icon(Icons.edit, size: 16, color: darkBrown)
+                  ? Icon(Icons.edit, size: 16, color: boje.A)
                   : null,
             ),
           ),
@@ -555,24 +561,24 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
     );
   }
 
-  Widget _buildIzdaniPoslovi() {
+  Widget _buildIzdaniPoslovi(QuickJobsColors boje) {
     if (_mojiOglasi.isEmpty) return const SizedBox.shrink();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           jeLiMojProfil ? "Moji izdani poslovi" : "Izdani poslovi korisnika",
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            color: darkBrown,
+            color: boje.A,
           ),
         ),
         const SizedBox(height: 10),
         Container(
           height: 125,
           decoration: BoxDecoration(
-            color: inputBg,
+            color: boje.C,
             borderRadius: BorderRadius.circular(15),
           ),
           child: ListView.builder(
@@ -581,7 +587,6 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
             itemCount: _mojiOglasi.length,
             itemBuilder: (context, index) {
               final oglas = _mojiOglasi[index];
-              // POPRAVAK kategorije se prikazuju kao ikone umjesto generičke ikone posla
               final ikonaOglasa =
                   kategorijeSaIkonama[oglas.kategorija] ?? Icons.work_outline;
 
@@ -594,22 +599,22 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                       height: 55,
                       width: 55,
                       decoration: BoxDecoration(
-                        color: cardColor,
+                        color: boje.bg?.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(15),
                       ),
                       child: Icon(
                         ikonaOglasa,
-                        color: Colors.white,
+                        color: boje.A,
                         size: 24,
-                      ), // Pravilna ikona posla
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       oglas.naslov,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
-                        color: darkBrown,
+                        color: boje.A,
                         fontWeight: FontWeight.bold,
                       ),
                       maxLines: 2,
@@ -625,57 +630,78 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
     );
   }
 
-  Widget _buildRecenzijeSekcija() {
-    if (_recenzije.isEmpty) return const SizedBox.shrink();
-    final prikazane = _prikaziSveRecenzije
-        ? _recenzije
-        : _recenzije.take(3).toList();
-
+  Widget _buildRecenzijeSekcija(QuickJobsColors boje) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           "Recenzije",
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            color: darkBrown,
+            color: boje.A,
           ),
         ),
         const SizedBox(height: 10),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 300),
-          child: Column(
-            children: prikazane.map((r) => _buildRecenzijaCard(r)).toList(),
-          ),
-        ),
-        if (_recenzije.length > 3)
-          Center(
-            child: TextButton.icon(
-              onPressed: () =>
-                  setState(() => _prikaziSveRecenzije = !_prikaziSveRecenzije),
-              icon: Icon(
-                _prikaziSveRecenzije
-                    ? Icons.keyboard_arrow_up
-                    : Icons.keyboard_arrow_down,
-                color: darkBrown,
-              ),
-              label: Text(
-                _prikaziSveRecenzije
-                    ? "Prikaži manje"
-                    : "Prikaži više (još ${_recenzije.length - 3})",
-                style: const TextStyle(
-                  color: darkBrown,
-                  fontWeight: FontWeight.bold,
+        _recenzije.isEmpty
+            ? Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: boje.B,
+                  borderRadius: BorderRadius.circular(15),
                 ),
+                child: Text(
+                  "Korisnik još nije recenziran.",
+                  style: TextStyle(
+                    color: boje.A?.withValues(alpha: 1.0),
+                    fontStyle: FontStyle.italic,
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            : Column(
+                children: [
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 300),
+                    child: Column(
+                      children: (_prikaziSveRecenzije
+                              ? _recenzije
+                              : _recenzije.take(3).toList())
+                          .map((r) => _buildRecenzijaCard(r, boje))
+                          .toList(),
+                    ),
+                  ),
+                  if (_recenzije.length > 3)
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () => setState(
+                            () => _prikaziSveRecenzije = !_prikaziSveRecenzije),
+                        icon: Icon(
+                          _prikaziSveRecenzije
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          color: boje.A,
+                        ),
+                        label: Text(
+                          _prikaziSveRecenzije
+                              ? "Prikaži manje"
+                              : "Prikaži više (još ${_recenzije.length - 3})",
+                          style: TextStyle(
+                            color: boje.A,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
-            ),
-          ),
       ],
     );
   }
 
-  Widget _buildRecenzijaCard(Recenzija r) {
+  Widget _buildRecenzijaCard(Recenzija r, QuickJobsColors boje) {
     final ikonaPosla =
         kategorijeSaIkonama[r.oglasKategorija] ?? Icons.work_outline;
 
@@ -683,7 +709,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: boje.C,
         borderRadius: BorderRadius.circular(15),
       ),
       child: Column(
@@ -694,8 +720,8 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
             children: [
               Text(
                 r.ocjenjivacIme,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: boje.A,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -703,8 +729,8 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                 children: [
                   Text(
                     "${r.ocjena}",
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: boje.A,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -715,16 +741,15 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
             ],
           ),
           const SizedBox(height: 4),
-          // Dodana ikonica tick uz naziv posla unutar recenzije
           Row(
             children: [
-              Icon(ikonaPosla, color: Colors.white60, size: 14),
+              Icon(ikonaPosla, color: boje.A?.withValues(alpha: 0.7), size: 14),
               const SizedBox(width: 5),
               Expanded(
                 child: Text(
                   "Za posao: ${r.oglasNaslov}",
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: boje.A?.withValues(alpha: 0.8),
                     fontSize: 11,
                     fontStyle: FontStyle.italic,
                   ),
@@ -735,10 +760,10 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
             ],
           ),
           if (r.komentar != null && r.komentar!.isNotEmpty) ...[
-            const Divider(color: Colors.white24, height: 15),
+            Divider(color: boje.A?.withValues(alpha: 0.2), height: 15),
             Text(
               r.komentar!,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
+              style: TextStyle(color: boje.A, fontSize: 13),
             ),
           ],
         ],
@@ -746,40 +771,43 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
     );
   }
 
-  void _prikaziDijalogZaReportProfila(BuildContext context, String korisnikId) {
+  void _prikaziDijalogZaReportProfila(BuildContext context, String korisnikId, QuickJobsColors boje) {
     String privremeniRazlog = "Scam / Neisplata";
     final komentarController = TextEditingController();
-//gumb za prijavu AKO su korisnici surađivali na obavljenom poslu onda se može reportati, inače ne, to provjeravamo u appbaru i ako se može reportati onda se prikaže ikona zastavice koja otvara ovaj dijalog
-//good grief take it to a publisher :skull:
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: boje.bg,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.report_problem_rounded, color: Colors.red),
-              SizedBox(width: 10),
+              const Icon(Icons.report_problem_rounded, color: Colors.red),
+              const SizedBox(width: 10),
               Text(
                 "Prijavi korisnika",
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.bold, color: boje.A),
               ),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 "Odaberite razlog zašto prijavljujete ovog korisnika nakon obavljenog posla:",
+                style: TextStyle(color: boje.A),
               ),
               const SizedBox(height: 15),
               DropdownButtonFormField<String>(
                 value: privremeniRazlog,
+                dropdownColor: boje.C,
+                style: TextStyle(color: boje.A, fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: Colors.grey[200],
+                  fillColor: boje.C,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -792,7 +820,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                           "Neprimjereno ponašanje",
                           "Ostalo",
                         ]
-                        .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                        .map((r) => DropdownMenuItem(value: r, child: Text(r, style: TextStyle(color: boje.A))))
                         .toList(),
                 onChanged: (v) {
                   if (v != null) {
@@ -806,10 +834,12 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
               TextField(
                 controller: komentarController,
                 maxLines: 3,
+                style: TextStyle(color: boje.A),
                 decoration: InputDecoration(
                   hintText: "Opišite detaljnije što se dogodilo...",
+                  hintStyle: TextStyle(color: boje.A?.withValues(alpha: 0.6)),
                   filled: true,
-                  fillColor: Colors.grey[200],
+                  fillColor: boje.C,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
@@ -824,11 +854,12 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                 komentarController.dispose();
                 Navigator.pop(context);
               },
-              child: const Text("Odustani"),
+              child: Text("Odustani", style: TextStyle(color: boje.A)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4A2C29),
+                backgroundColor: boje.A,
+                foregroundColor: boje.bg,
               ),
               onPressed: () async {
                 final user = supabase.auth.currentUser;
@@ -860,10 +891,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                   debugPrint("Greška pri slanju reporta na profil: $e");
                 }
               },
-              child: const Text(
-                "Pošalji",
-                style: TextStyle(color: Colors.white),
-              ),
+              child: const Text("Pošalji"),
             ),
           ],
         ),

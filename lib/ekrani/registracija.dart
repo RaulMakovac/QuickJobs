@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart'; // Ključno za klik na tekst
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'opciUvjeti.dart'; // Provjeri putanju do ekrana s uvjetima
+import '../dekor.dart'; // Uvoz centraliziranih boja i teme
 
 // DEFINICIJA SUPABASE KLIJENTA
 final supabase = Supabase.instance.client;
@@ -21,15 +22,6 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
 
   bool _prihvacamUvjete = false;
   bool _isLoading = false;
-
-  // Boje usklađene s dizajnom
-  static const backgroundColor = Color(0xFFE5D9D6);
-  static const circleColor = Color(0xFFD6C8C5);
-  static const inputFieldColor = Color(0xFFD1BDB9);
-  static const darkBrownColor = Color(0xFF6D3F3A);
-  static const mediumBrownColor = Color(0xFF8F6E68);
-  static const textColor = Color(0xFF2E2E2E);
-  static const hintTextColor = Color(0xFF8C5353);
 
   Future<void> _signUp() async {
     if (_imeController.text.isEmpty ||
@@ -100,147 +92,133 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: Stack(
-        children: [
-          // Dekorativni krugovi
-          Positioned(
-            top: -120,
-            left: -100,
-            child: CustomPaint(
-              size: const Size(280, 280),
-              painter: CirclePainter(color: circleColor),
-            ),
-          ),
-          Positioned(
-            bottom: -80,
-            right: -50,
-            child: CustomPaint(
-              size: const Size(300, 300),
-              painter: CirclePainter(color: circleColor),
-            ),
-          ),
+    // Dohvaćamo definirane boje iz dekor.dart
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
 
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Back gumb
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 16),
-                        child: IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(
-                            Icons.arrow_back_ios_new,
-                            size: 26,
-                            color: Color(0xFF4A2C29),
-                          ),
+    return Scaffold(
+      backgroundColor: boje.bg,
+      body: PozadinaKrugovi(
+        krugBoja: boje.C,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Back gumb
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 16),
+                      child: IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(
+                          Icons.arrow_back_ios_new,
+                          size: 26,
+                          color: boje.A,
                         ),
                       ),
                     ),
+                  ),
 
-                    
-
-                    const Text(
-                      'Registracija',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: darkBrownColor,
-                        letterSpacing: 1.2,
-                      ),
+                  Text(
+                    'Registracija',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: boje.A,
+                      letterSpacing: 1.2,
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Molimo vas da unesete vaše korisničke podatke',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, color: textColor),
-                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Molimo vas da unesete vaše korisničke podatke',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16, color: boje.A),
+                  ),
 
-                    const SizedBox(height: 40),
+                  const SizedBox(height: 40),
 
-                    _buildInputField(
-                      _imeController,
-                      'Ime i prezime',
-                      Icons.person,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildInputField(
-                      _emailController,
-                      'E-mail adresa',
-                      Icons.email,
-                      isEmail: true,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildInputField(
-                      _telefonController,
-                      'Broj telefona',
-                      Icons.phone,
-                      isPhone: true,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildInputField(
-                      _lozinkaController,
-                      'Lozinka',
-                      Icons.lock,
-                      isPassword: true,
-                    ),
+                  _buildInputField(
+                    _imeController,
+                    'Ime i prezime',
+                    Icons.person,
+                    boje,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildInputField(
+                    _emailController,
+                    'E-mail adresa',
+                    Icons.email,
+                    boje,
+                    isEmail: true,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildInputField(
+                    _telefonController,
+                    'Broj telefona',
+                    Icons.phone,
+                    boje,
+                    isPhone: true,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildInputField(
+                    _lozinkaController,
+                    'Lozinka',
+                    Icons.lock,
+                    boje,
+                    isPassword: true,
+                  ),
 
-                    const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                    // CHECKBOX S LINKOM NA UVJETE
-                    _buildCheckbox('', _prihvacamUvjete, (value) {
-                      setState(() => _prihvacamUvjete = value!);
-                    }, isLegal: true),
+                  // CHECKBOX S LINKOM NA UVJETE
+                  _buildCheckbox('', _prihvacamUvjete, (value) {
+                    setState(() => _prihvacamUvjete = value!);
+                  }, boje, isLegal: true),
 
-                    
+                  const SizedBox(height: 40),
 
-                    const SizedBox(height: 40),
-
-                    _isLoading
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              color: darkBrownColor,
-                            ),
-                          )
-                        : _buildMainButton(
-                            'Registracija',
-                            darkBrownColor,
-                            _signUp,
+                  _isLoading
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: boje.A,
                           ),
+                        )
+                      : _buildMainButton(
+                          'Registracija',
+                          boje.A!,
+                          boje.bg!,
+                          _signUp,
+                        ),
 
-                    const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                    _buildMainButton(
-                      'Log in',
-                      mediumBrownColor,
-                      () => Navigator.pushNamed(context, '/ekrani/login'),
+                  _buildMainButton(
+                    'Log in',
+                    boje.B!,
+                    boje.A!,
+                    () => Navigator.pushNamed(context, '/ekrani/login'),
+                  ),
+
+                  const SizedBox(height: 24),
+                  Text(
+                    'Već imate profil?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: boje.A,
+                      fontWeight: FontWeight.w500,
                     ),
-
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Već imate profil?',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: textColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 32),
+                ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -248,14 +226,15 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
   Widget _buildInputField(
     TextEditingController controller,
     String hintText,
-    IconData icon, {
+    IconData icon,
+    QuickJobsColors boje, {
     bool isPassword = false,
     bool isEmail = false,
     bool isPhone = false,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: inputFieldColor,
+        color: boje.C,
         borderRadius: BorderRadius.circular(20),
       ),
       child: TextField(
@@ -264,11 +243,14 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
         keyboardType: isEmail
             ? TextInputType.emailAddress
             : (isPhone ? TextInputType.phone : TextInputType.text),
-        style: const TextStyle(color: textColor, fontSize: 16),
+        style: TextStyle(color: boje.A, fontSize: 16),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(color: hintTextColor, fontSize: 16),
-          prefixIcon: Icon(icon, color: hintTextColor),
+          hintStyle: TextStyle(
+            color: boje.A?.withValues(alpha: 0.65),
+            fontSize: 16,
+          ),
+          prefixIcon: Icon(icon, color: boje.A?.withValues(alpha: 0.75)),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 24,
@@ -283,36 +265,46 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
   Widget _buildCheckbox(
     String title,
     bool value,
-    ValueChanged<bool?> onChanged, {
+    ValueChanged<bool?> onChanged,
+    QuickJobsColors boje, {
     bool isLegal = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
         children: [
-          Checkbox(
+          Theme(
+          data: ThemeData(
+            unselectedWidgetColor: boje.A, // Boja okvira kada NIJE označen
+          ),
+          child: Checkbox(
             value: value,
             onChanged: onChanged,
-            activeColor: darkBrownColor,
-            checkColor: Colors.white,
+            activeColor: boje.A,
+            checkColor: boje.bg,
+            side: BorderSide(
+              color: boje.A!,         // Precizna definicija ruba kućice
+              width: 2.0,
           ),
+          ),
+        ),
           Expanded(
             child: isLegal
                 ? RichText(
                     text: TextSpan(
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: textColor,
+                        color: boje.A,
                         fontFamily: 'Sans Serif',
                       ),
                       children: [
                         const TextSpan(text: 'Prihvaćam '),
                         TextSpan(
                           text: 'uvjete korištenja',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             decoration: TextDecoration.underline,
-                            color: darkBrownColor,
+                            color: boje.A,
                           ),
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {
@@ -331,7 +323,7 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
                   )
                 : Text(
                     title,
-                    style: const TextStyle(fontSize: 14, color: textColor),
+                    style: TextStyle(fontSize: 14, color: boje.A),
                   ),
           ),
         ],
@@ -339,12 +331,17 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
     );
   }
 
-  Widget _buildMainButton(String text, Color color, VoidCallback onPressed) {
+  Widget _buildMainButton(
+    String text,
+    Color bgColor,
+    Color fgColor,
+    VoidCallback onPressed,
+  ) {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
+        backgroundColor: bgColor,
+        foregroundColor: fgColor,
         minimumSize: const Size(double.infinity, 60),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         elevation: 6,
@@ -356,24 +353,4 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
       ),
     );
   }
-}
-
-// Painter za krugove u pozadini
-class CirclePainter extends CustomPainter {
-  final Color color;
-  CirclePainter({required this.color});
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(
-      Offset(size.width / 2, size.height / 2),
-      size.width / 2,
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

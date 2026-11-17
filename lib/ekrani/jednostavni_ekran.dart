@@ -28,20 +28,20 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
 
   @override
   Widget build(BuildContext context) {
-    const tamnoSmedja = Color(0xFF4A2C29);
-    const bojaIkone = Color(0xFF63403C);
-    const bojaPozadineIkone = Color(0xFFD9C5C1);
+    // Dohvaćamo definirane boje iz dekor.dart
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE5D9D6),
+      backgroundColor: boje.bg,
       body: PozadinaKrugovi(
+        krugBoja: boje.C, // Koristi globalni sustav krugova
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10.0),
             child: Column(
               children: [
                 const SizedBox(height: 30),
-                _buildLogo(tamnoSmedja),
+                _buildLogo(boje.A!),
                 
                 // SREDIŠNJI DIO - Sve je centrirano i nema skrolanja
                 Expanded(
@@ -60,32 +60,28 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
                             context,
                             ikona: Icons.settings_rounded,
                             naslov: "Postavke",
-                            boja: bojaIkone,
-                            pozadina: bojaPozadineIkone,
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PostavkeEkran(dolaziIzJednostavnog: true,))),
+                            boje: boje,
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PostavkeEkran(dolaziIzJednostavnog: true))),
                           ),
                           _buildVelikaTipka(
                             context,
                             ikona: Icons.person_rounded,
                             naslov: "Moj profil",
-                            boja: bojaIkone,
-                            pozadina: bojaPozadineIkone,
+                            boje: boje,
                             onTap: () => Navigator.pushNamed(context, '/ekrani/korisnicki_profil'),
                           ),
                           _buildVelikaTipka(
                             context,
                             ikona: Icons.chat_bubble_rounded,
                             naslov: "Poruke",
-                            boja: bojaIkone,
-                            pozadina: bojaPozadineIkone,
+                            boje: boje,
                             onTap: () => Navigator.pushNamed(context, '/ekrani/chat_hub'),
                           ),
                           _buildVelikaTipka(
                             context,
                             ikona: Icons.handyman_rounded,
                             naslov: "Moji oglasi",
-                            boja: bojaIkone,
-                            pozadina: bojaPozadineIkone,
+                            boje: boje,
                             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MojiOglasi())),
                           ),
                         ],
@@ -93,8 +89,7 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
                       
                       const SizedBox(height: 20),
                       
-                      
-                      _buildGlavniDodajOglasGumb(context, tamnoSmedja),
+                      _buildGlavniDodajOglasGumb(context, boje),
                     ],
                   ),
                 ),
@@ -107,54 +102,52 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
       ),
     );
   }
-Widget _buildLogo(Color boja) {
-  return Column(
-    children: [
-      SvgPicture.asset(
-        'assets/images/QJ_Logo.svg', 
-        width: 100,             
-        height: 100,
-        
-        
-      ),
-      const SizedBox(height: 14),
-      Text(
-        "QuickJobs",
-        style: TextStyle(
-          fontSize: 26, 
-          fontWeight: FontWeight.bold, 
-          color: boja, 
-          letterSpacing: 1.5,
+
+  Widget _buildLogo(Color boja) {
+    return Column(
+      children: [
+        SvgPicture.asset(
+          'assets/images/QJ_Logo.svg', 
+          width: 100,             
+          height: 100,
         ),
-      ),
-    ],
-  );
-}
+        const SizedBox(height: 14),
+        Text(
+          "QuickJobs",
+          style: TextStyle(
+            fontSize: 26, 
+            fontWeight: FontWeight.bold, 
+            color: boja, 
+            letterSpacing: 1.5,
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildVelikaTipka(BuildContext context, {
     required IconData ikona,
     required String naslov,
-    required Color boja,
-    required Color pozadina,
+    required QuickJobsColors boje,
     required VoidCallback onTap,
   }) {
     return Card(
       elevation: 2,
       shadowColor: Colors.black.withOpacity(0.2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      color: pozadina.withOpacity(0.9),
+      color: boje.C, // Kartice koriste boju C
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(ikona, size: 44, color: boja),
+            Icon(ikona, size: 44, color: boje.A),
             const SizedBox(height: 12),
             Text(
               naslov,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: boja),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: boje.A),
             ),
           ],
         ),
@@ -162,13 +155,12 @@ Widget _buildLogo(Color boja) {
     );
   }
 
-  // NOVI DIZAJN: Široka horizontalna kartica koja spaja vizualni prostor na dnu grida
-  Widget _buildGlavniDodajOglasGumb(BuildContext context, Color boja) {
+  Widget _buildGlavniDodajOglasGumb(BuildContext context, QuickJobsColors boje) {
     return Card(
       elevation: 4,
-      shadowColor: boja.withOpacity(0.4),
+      shadowColor: boje.A?.withOpacity(0.4),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      color: boja,
+      color: boje.A, // Glavni gumb koristi boju A
       child: InkWell(
         onTap: () => Navigator.pushNamed(context, '/ekrani/objava_oglasa'),
         borderRadius: BorderRadius.circular(24),
@@ -177,14 +169,14 @@ Widget _buildLogo(Color boja) {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.add_circle_outline_rounded, size: 30, color: Colors.white),
+              Icon(Icons.add_circle_outline_rounded, size: 30, color: boje.bg),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 "Objavi novi oglas",
                 style: TextStyle(
                   fontSize: 18, 
                   fontWeight: FontWeight.bold, 
-                  color: Colors.white,
+                  color: boje.bg, // Tekst koristi boju bg za kontrast
                   letterSpacing: 0.5
                 ),
               ),

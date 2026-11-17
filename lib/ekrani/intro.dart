@@ -1,42 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart'; 
+import '../dekor.dart';
 
 class intro extends StatelessWidget {
-  const intro ({super.key});
+  const intro({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const backgroundColor = Color(0xFFE5D9D6);
-    const primaryTextColor = Color(0xFF2E2E2E);
-    const accentColor = Color(0xFF8C5353);
-    const circleColor = Color(0xFFD6C8C5);
+    // 1. Dohvaćamo tvoju paletu boja
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
 
-
-
-  return Scaffold(
-    backgroundColor: backgroundColor,
-    body: Stack(
-      children: [
-        // 1. KRUGOVI )
-        Positioned(
-          top: -60, 
-          left: -60,
-          child: CustomPaint(
-            size: const Size(200, 200),
-            painter: CirclePainter(color: circleColor),
-          ),
-        ),
-        Positioned(
-          bottom: -80,
-          right: -40,
-          child: CustomPaint(
-            size: const Size(250, 250),
-            painter: CirclePainter(color: circleColor),
-          ),
-        ),
-
-        // 2. SADRŽAJ 
-        SafeArea(
+    return Scaffold(
+      backgroundColor: boje.bg, // 1. boja za pozadinu ekrana
+      body: PozadinaKrugovi(
+        krugBoja: boje.C, // Proslijeđujemo boju C u globalni sustav krugova
+        child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
@@ -52,25 +30,26 @@ class intro extends StatelessWidget {
 
                 const SizedBox(height: 40),
 
-                // Tekst
-                const Text(
+                // Naslov
+                Text(
                   'Brzo i lako pronađite izvor zarade ili radnika uz QuickJobs',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 21,
                     fontWeight: FontWeight.bold,
-                    color: primaryTextColor,
+                    color: boje.A,
                   ),
                 ),
                 const SizedBox(height: 30),
-                // Tekst
-                const Text(
-
-"Mjesto gdje ponuda i potražnja za privremenim poslovima postaju jednostavne. Bilo da hitno trebate obaviti zadatak ili tražite fleksibilnu priliku za zaradu, QuickJobs vam omogućuje siguran pronalazak idealnog spoja.",                  textAlign: TextAlign.center,
+                
+                // Podnaslov
+                Text(
+                  'Mjesto gdje ponuda i potražnja za privremenim poslovima postaju jednostavne. Bilo da hitno trebate obaviti zadatak ili tražite fleksibilnu priliku za zaradu, QuickJobs vam omogućuje siguran pronalazak idealnog spoja.',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.normal,
-                    color: primaryTextColor,
+                    color: boje.A,
                   ),
                 ),
                 
@@ -79,12 +58,11 @@ class intro extends StatelessWidget {
                 // Gumb
                 ElevatedButton(
                   onPressed: () {
-                // Navigator.pushNamed šalje korisnika na registraciju
-                  Navigator.pushNamed(context, '/ekrani/registracija');
-                },
+                    Navigator.pushNamed(context, '/ekrani/registracija');
+                  },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: accentColor,
-                    foregroundColor: Colors.white,
+                    backgroundColor: boje.A,
+                    foregroundColor: boje.bg,
                     minimumSize: const Size(double.infinity, 56),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -92,34 +70,12 @@ class intro extends StatelessWidget {
                   ),
                   child: const Text('Započnite', style: TextStyle(fontSize: 18)),
                 ),
-                const SizedBox(height: 20), // Mali razmak od dna SafeAree
+                const SizedBox(height: 20),
               ],
             ),
           ),
         ),
-      ],
-    ),
-  );
-}
-}
-// --- POMOĆNA KLASA ZA CRTANJE KRUGA ---
-class CirclePainter extends CustomPainter {
-  final Color color;
-
-  CirclePainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    // Crtamo krug u središtu zadanog Size-a s radijusom koji odgovara širini
-    canvas.drawCircle(Offset(size.width / 2, size.height / 2), size.width / 2, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false; // Krug se ne mijenja, pa ga ne treba ponovno crtati
+      ),
+    );
   }
 }

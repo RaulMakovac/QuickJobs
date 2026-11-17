@@ -38,7 +38,7 @@ class Oglas {
     this.kategorija = "Ostalo",
   });
 
-  Oglas copyWith({String? autorIme}) { // potrebno za ažuriranje imena autora nakon učitavanja oglasa, jer se ime nalazi u povezanom profilu
+  Oglas copyWith({String? autorIme}) { 
     return Oglas(
       id: id,
       naslov: naslov,
@@ -94,11 +94,6 @@ class _glavni_ekranState extends State<glavni_ekran> {
   double _minIsplata = 0;
   String? _odabranaKategorija;
   bool _prikaziFiltere = false;
-
-  static const bgColor = Color(0xFFE5D9D6);
-  static const cardColor = Color(0xFF8F6E68);
-  static const searchBarColor = Color(0xFFD1BDB9);
-  static const darkBrown = Color(0xFF4A2C29);
 
   Future<List<Oglas>> dohvatiOglase() async {
     try {
@@ -160,16 +155,20 @@ class _glavni_ekranState extends State<glavni_ekran> {
 
   @override
   Widget build(BuildContext context) {
+    // Dohvaćamo definirane boje iz dekor.dart
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
+
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: boje.bg,
       body: PozadinaKrugovi(
+        krugBoja: boje.C,
         child: SafeArea(
           child: CustomScrollView(
             slivers: [
               // 1. HEADER
               SliverAppBar(
                 automaticallyImplyLeading: false,
-                backgroundColor: const Color.fromARGB(0, 0, 0, 0),
+                backgroundColor: Colors.transparent,
                 expandedHeight: 120,
                 floating: false,
                 pinned: false,
@@ -192,6 +191,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
                               ),
                             ),
                           ),
+                          boje,
                         ),
                         _buildCentralLogo(),
                         _buildHeaderIcon(
@@ -202,6 +202,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
                               builder: (context) => const KorisnickiProfil(),
                             ),
                           ),
+                          boje,
                           size: 35,
                         ),
                       ],
@@ -210,24 +211,18 @@ class _glavni_ekranState extends State<glavni_ekran> {
                 ),
               ),
 
-              // 2. SEARCH BAR & FILTERS - Spojeni panel koji se rasteže
+              // 2. SEARCH BAR & FILTERS
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _StickySearchDelegate(
-                  visina: _prikaziFiltere
-                      ? 265
-                      : 80,
+                  visina: _prikaziFiltere ? 265 : 80,
+                  bgColor: boje.bg!.withValues(alpha: 0.0),
                   child: Container(
                     decoration: BoxDecoration(
                       color: _prikaziFiltere
-                          ? searchBarColor.withOpacity(0.95)
-                          : const Color.fromARGB(0, 0, 0, 0),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(25),
-                        topRight: Radius.circular(25),
-                        bottomLeft: Radius.circular(25),
-                        bottomRight: Radius.circular(25),
-                      ),
+                          ? boje.C?.withValues(alpha: 0.95)
+                          : Colors.transparent,
+                      borderRadius: const BorderRadius.all(Radius.circular(25)),
                     ),
                     padding: const EdgeInsets.only(
                       left: 25,
@@ -235,7 +230,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
                       top: 10,
                     ),
                     child: Column(
-                      children: [_buildSearchBar(), _buildFilterPanel()],
+                      children: [_buildSearchBar(boje), _buildFilterPanel(boje)],
                     ),
                   ),
                 ),
@@ -248,22 +243,25 @@ class _glavni_ekranState extends State<glavni_ekran> {
                   future: dohvatiOglase(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const SliverToBoxAdapter(
+                      return SliverToBoxAdapter(
                         child: Center(
                           child: Padding(
-                            padding: EdgeInsets.all(50),
-                            child: CircularProgressIndicator(color: darkBrown),
+                            padding: const EdgeInsets.all(50),
+                            child: CircularProgressIndicator(color: boje.A),
                           ),
                         ),
                       );
                     }
                     final oglasi = snapshot.data ?? [];
                     if (oglasi.isEmpty) {
-                      return const SliverToBoxAdapter(
+                      return SliverToBoxAdapter(
                         child: Center(
                           child: Padding(
-                            padding: EdgeInsets.all(50),
-                            child: Text("Nema dostupnih oglasa."),
+                            padding: const EdgeInsets.all(50),
+                            child: Text(
+                              "Nema dostupnih oglasa.",
+                              style: TextStyle(color: boje.A),
+                            ),
                           ),
                         ),
                       );
@@ -272,7 +270,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
                       delegate: SliverChildBuilderDelegate(
                         (context, index) => Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: _buildOglasCard(oglasi[index]),
+                          child: _buildOglasCard(oglasi[index], boje),
                         ),
                         childCount: oglasi.length,
                       ),
@@ -284,17 +282,18 @@ class _glavni_ekranState extends State<glavni_ekran> {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+      bottomNavigationBar: _buildBottomNav(boje),
     );
   }
 
   Widget _buildHeaderIcon(
     IconData icon,
-    VoidCallback onTap, {
+    VoidCallback onTap,
+    QuickJobsColors boje, {
     double size = 28,
   }) {
     return IconButton(
-      icon: Icon(icon, color: darkBrown, size: size),
+      icon: Icon(icon, color: boje.A, size: size),
       onPressed: onTap,
     );
   }
@@ -308,24 +307,26 @@ class _glavni_ekranState extends State<glavni_ekran> {
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(QuickJobsColors boje) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
       decoration: BoxDecoration(
-        color: searchBarColor,
+        color: boje.B,
         borderRadius: BorderRadius.circular(25),
       ),
       child: TextField(
         controller: _searchController,
         onChanged: (value) => setState(() => _searchQuery = value),
+        style: TextStyle(color: boje.A),
         decoration: InputDecoration(
-          icon: const Icon(Icons.search, color: Colors.black54),
+          icon: Icon(Icons.search, color: boje.A?.withValues(alpha: 0.7)),
           hintText: 'Pretraži poslove...',
+          hintStyle: TextStyle(color: boje.A?.withValues(alpha: 1.0)),
           border: InputBorder.none,
           suffixIcon: IconButton(
             icon: Icon(
               _prikaziFiltere ? Icons.expand_less : Icons.tune,
-              color: darkBrown,
+              color: boje.A,
             ),
             onPressed: () => setState(() => _prikaziFiltere = !_prikaziFiltere),
           ),
@@ -334,8 +335,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
     );
   }
 
-  // FIKSIRANO: Korištenjem OverflowBox-a i AnimatedOpacity-a, panel se može vizualno proširiti i sakriti bez da stvarno mijenja svoju veličinu u layoutu, što sprječava overflow greške
-  Widget _buildFilterPanel() {
+  Widget _buildFilterPanel(QuickJobsColors boje) {
     List<String> stavkeKategorija = [
       "Sve kategorije",
       ...kategorijeSaIkonama.keys,
@@ -346,16 +346,13 @@ class _glavni_ekranState extends State<glavni_ekran> {
       curve: Curves.easeInOut,
       height: _prikaziFiltere ? 170 : 0,
       margin: EdgeInsets.only(top: _prikaziFiltere ? 10 : 0),
-      // Kada se zatvara, padding mora biti 0, inače on sam stvara overflow
       padding: EdgeInsets.all(_prikaziFiltere ? 15 : 0),
-      decoration: const BoxDecoration(),
       clipBehavior: Clip.none,
       child: AnimatedOpacity(
         duration: const Duration(milliseconds: 300),
         opacity: _prikaziFiltere ? 1.0 : 0.0,
-        // OverflowBox dopušta elementima da zadrže svoju veličinu dok se kontejner skuplja u nulu
         child: OverflowBox(
-          maxHeight: 170, //PROMJENIIIII
+          maxHeight: 170,
           alignment: Alignment.topCenter,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -363,18 +360,18 @@ class _glavni_ekranState extends State<glavni_ekran> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     "Min. isplata",
                     style: TextStyle(
-                      fontWeight: FontWeight.bold, 
-                      color: darkBrown,
+                      fontWeight: FontWeight.bold,
+                      color: boje.A,
                     ),
                   ),
                   Text(
                     "${_minIsplata.toInt()}€",
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: darkBrown,
+                      color: boje.A,
                     ),
                   ),
                 ],
@@ -384,21 +381,21 @@ class _glavni_ekranState extends State<glavni_ekran> {
                 min: 0,
                 max: 200,
                 divisions: 20,
-                activeColor: darkBrown,
-                inactiveColor: Colors.white24,
+                activeColor: boje.A,
+                inactiveColor: boje.B?.withValues(alpha: 0.3),
                 onChanged: (value) => setState(() => _minIsplata = value),
               ),
               const SizedBox(height: 5),
-              const Text(
+              Text(
                 "Kategorija posla",
-                style: TextStyle(fontWeight: FontWeight.bold, color: darkBrown),
+                style: TextStyle(fontWeight: FontWeight.bold, color: boje.A),
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _odabranaKategorija ?? "Sve kategorije",
-                dropdownColor: searchBarColor,
-                style: const TextStyle(
-                  color: darkBrown,
+                dropdownColor: boje.C,
+                style: TextStyle(
+                  color: boje.A,
                   fontWeight: FontWeight.w600,
                 ),
                 decoration: InputDecoration(
@@ -407,7 +404,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
                     vertical: 10,
                   ),
                   filled: true,
-                  fillColor: Colors.white30,
+                  fillColor: boje.bg?.withValues(alpha: 0.4),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                     borderSide: BorderSide.none,
@@ -421,11 +418,11 @@ class _glavni_ekranState extends State<glavni_ekran> {
                         Icon(
                           kategorijeSaIkonama[kategorija] ??
                               Icons.layers_rounded,
-                          color: darkBrown,
+                          color: boje.A,
                           size: 20,
                         ),
                         const SizedBox(width: 10),
-                        Text(kategorija),
+                        Text(kategorija, style: TextStyle(color: boje.A)),
                       ],
                     ),
                   );
@@ -443,7 +440,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
     );
   }
 
-  Widget _buildOglasCard(Oglas oglas) {
+  Widget _buildOglasCard(Oglas oglas, QuickJobsColors boje) {
     final ikonaKategorije =
         kategorijeSaIkonama[oglas.kategorija] ?? Icons.more_horiz_rounded;
 
@@ -459,7 +456,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
         margin: const EdgeInsets.only(bottom: 15),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: cardColor,
+          color: boje.C,
           borderRadius: BorderRadius.circular(25),
         ),
         child: Row(
@@ -469,8 +466,8 @@ class _glavni_ekranState extends State<glavni_ekran> {
               child: Container(
                 width: 70,
                 height: 70,
-                color: const Color(0xFFE5D9D6).withOpacity(0.25),
-                child: Icon(ikonaKategorije, color: Colors.white, size: 35),
+                color: boje.bg?.withValues(alpha: 0.3),
+                child: Icon(ikonaKategorije, color: boje.A, size: 35),
               ),
             ),
             const SizedBox(width: 15),
@@ -480,7 +477,10 @@ class _glavni_ekranState extends State<glavni_ekran> {
                 children: [
                   Text(
                     DateFormat('dd.MM.yyyy.').format(oglas.createdAt),
-                    style: const TextStyle(color: Colors.white70, fontSize: 10),
+                    style: TextStyle(
+                      color: boje.A?.withValues(alpha: 0.7),
+                      fontSize: 10,
+                    ),
                   ),
                   if (oglas.jeReportan)
                     Container(
@@ -515,22 +515,25 @@ class _glavni_ekranState extends State<glavni_ekran> {
                     ),
                   Text(
                     oglas.naslov,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: boje.A,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
                   ),
                   Text(
                     'Autor: ${oglas.autorIme}',
-                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                    style: TextStyle(
+                      color: boje.A?.withValues(alpha: 0.8),
+                      fontSize: 12,
+                    ),
                   ),
                   Align(
                     alignment: Alignment.bottomRight,
                     child: Text(
                       '${oglas.isplata}€',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: boje.A,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
@@ -545,15 +548,15 @@ class _glavni_ekranState extends State<glavni_ekran> {
     );
   }
 
-  Widget _buildBottomNav() {
+  Widget _buildBottomNav(QuickJobsColors boje) {
     return Container(
       height: 70,
-      color: const Color(0xFF83645E),
+      color: boje.B,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           IconButton(
-            icon: const Icon(Icons.handyman, size: 30, color: Colors.black),
+            icon: Icon(Icons.handyman, size: 30, color: boje.A),
             onPressed: () async {
               await Navigator.pushNamed(context, '/ekrani/job_hub');
               setState(() {});
@@ -562,20 +565,20 @@ class _glavni_ekranState extends State<glavni_ekran> {
           IconButton(
             icon: Container(
               padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFF6D3F3A),
+              decoration: BoxDecoration(
+                color: boje.A,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.add, color: Colors.white, size: 25),
+              child: Icon(Icons.add, color: boje.bg, size: 25),
             ),
             onPressed: () =>
                 Navigator.pushNamed(context, '/ekrani/objava_oglasa'),
           ),
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.chat_bubble_outline,
               size: 30,
-              color: Colors.black,
+              color: boje.A,
             ),
             onPressed: () => Navigator.pushNamed(context, '/ekrani/chat_hub'),
           ),
@@ -588,8 +591,13 @@ class _glavni_ekranState extends State<glavni_ekran> {
 class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
   final double visina;
+  final Color bgColor;
 
-  _StickySearchDelegate({required this.child, required this.visina});
+  _StickySearchDelegate({
+    required this.child,
+    required this.visina,
+    required this.bgColor,
+  });
 
   @override
   double get minExtent => visina;
@@ -603,7 +611,7 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: const Color(0xFFE5D9D6), 
+      color: bgColor, 
       child: ClipRect(
         child: OverflowBox(
           minHeight: 0,
@@ -615,11 +623,8 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
     );
   }
 
-  
   @override
   bool shouldRebuild(_StickySearchDelegate oldDelegate) {
-    return true; 
+    return oldDelegate.visina != visina || oldDelegate.bgColor != bgColor;
   }
 }
-
-

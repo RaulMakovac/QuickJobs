@@ -10,36 +10,34 @@ class PostavkeEkran extends StatelessWidget {
   const PostavkeEkran({super.key, this.dolaziIzJednostavnog = false});
 
   // --- LOGIKA ZA BRISANJE PROFILA I RAČUNA ---
-  void _obrisiRacun(BuildContext context) async {
-    const tamnoSmedja = Color(0xFF4A2C29);
-    const bojaPozadine = Color(0xFFE5D9D6);
+  void _obrisiRacun(BuildContext context, QuickJobsColors boje) async {
     final supabase = Supabase.instance.client;
 
     bool? potvrda = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: bojaPozadine,
+        backgroundColor: boje.bg,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
             const SizedBox(width: 10),
-            const Text(
+            Text(
               "Brisanje računa", 
-              style: TextStyle(color: tamnoSmedja, fontWeight: FontWeight.bold)
+              style: TextStyle(color: boje.A, fontWeight: FontWeight.bold)
             ),
           ],
         ),
-        content: const Text(
+        content: Text(
           "Jeste li potpuno sigurni da želite obrisati svoj račun?\n\n"
           "Ova akcija je nepovratna i izbrisat će sve vaše podatke, oglase i recenzije.",
-          style: TextStyle(color: Colors.black87),
+          style: TextStyle(color: boje.A?.withValues(alpha: 0.9)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false), 
-            child: const Text("Odustani", style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold))
+            child: Text("Odustani", style: TextStyle(color: boje.A?.withValues(alpha: 0.7), fontWeight: FontWeight.bold))
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -54,54 +52,54 @@ class PostavkeEkran extends StatelessWidget {
     );
 
     if (potvrda == true) {
-  try {
-    final user = supabase.auth.currentUser;
-    if (user == null) return;
-    final userId = user.id; // Spremi ID prije odjave
-    await supabase.rpc('potpuno_obrisi_korisnika');
-    //Prvo napravi signOut da očistiš lokalne tokene i sesiju u aplikaciji
-    await supabase.auth.signOut();
-    await supabase.from('profiles').delete().eq('id', userId);
+      try {
+        final user = supabase.auth.currentUser;
+        if (user == null) return;
+        final userId = user.id;
+        await supabase.rpc('potpuno_obrisi_korisnika');
+        await supabase.auth.signOut();
+        await supabase.from('profiles').delete().eq('id', userId);
 
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Vaš račun je uspješno i trajno obrisan."),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Vaš račun je uspješno i trajno obrisan."),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+        }
+      } catch (e) {
+        debugPrint("Greška pri brisanju računa: $e");
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Greška pri brisanju: $e"),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
     }
-  } catch (e) {
-    debugPrint("Greška pri brisanju računa: $e");
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Greška pri brisanju: $e"),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    }
-  }
-}
   }
 
   @override
   Widget build(BuildContext context) {
-    const tamnoSmedja = Color(0xFF4A2C29);
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE5D9D6),
+      backgroundColor: boje.bg,
       body: PozadinaKrugovi(
+        krugBoja: boje.C,
         child: SafeArea(
           child: Column(
             children: [
-              _buildHeader(context, tamnoSmedja),
+              _buildHeader(context, boje),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
                   children: [
-                    // PRVA GRUPA: Općenito i način rada sa jednostavnog na standardni i obrnuto
+                    // PRVA GRUPA: Način rada, Opći uvjeti, Brisanje računa
                     _buildPostavkeGrupa([
                       _PostavkaItem(
                         ikona: dolaziIzJednostavnog 
@@ -110,6 +108,7 @@ class PostavkeEkran extends StatelessWidget {
                         naslov: dolaziIzJednostavnog 
                             ? "Standardni način rada" 
                             : "Jednostavan način rada",
+                        boje: boje,
                         onTap: () {
                           if (dolaziIzJednostavnog) {
                             Navigator.pushAndRemoveUntil(
@@ -125,11 +124,11 @@ class PostavkeEkran extends StatelessWidget {
                             );
                           }
                         },
-                        bojaTeksta: tamnoSmedja,
                       ),
                       _PostavkaItem(
                         ikona: Icons.description_outlined,
                         naslov: "Opći uvjeti korištenja",
+                        boje: boje,
                         onTap: () {
                           Navigator.push(
                             context,
@@ -137,32 +136,74 @@ class PostavkeEkran extends StatelessWidget {
                           );
                         },
                       ),
-                      // brisanje računa
                       _PostavkaItem(
                         ikona: Icons.delete_forever_rounded,
                         naslov: "Obriši moj račun",
-                        onTap: () => _obrisiRacun(context),           
+                        boje: boje,
+                        onTap: () => _obrisiRacun(context, boje),           
                         isZadnji: true,
-                        bojaTeksta: Colors.red[700],
-                        bojaIkone: Colors.red[700],
+                        bojaTeksta: Colors.redAccent,
+                        bojaIkone: Colors.redAccent,
                       ),
-                    ]),
+                    ], boje),
 
                     const SizedBox(height: 25),
 
-                    // nefunkcionalni placeholderi
+                    // DRUGA GRUPA: Izgled (Dark/Light mode toggle) i ostalo
                     _buildPostavkeGrupa([
-                      _PostavkaItem(ikona: Icons.palette_outlined, naslov: "Promjena izgleda", onTap: () {}),
-                      _PostavkaItem(ikona: Icons.grid_view_rounded, naslov: "Broj oglasa po stranici", onTap: () {}),
-                      _PostavkaItem(ikona: Icons.format_size_rounded, naslov: "Veličina fonta", onTap: () {}),
-                      _PostavkaItem(ikona: Icons.contrast_rounded, naslov: "Visok kontrast", onTap: () {}),
+                      ValueListenableBuilder<ThemeMode>(
+                        valueListenable: themeNotifier,
+                        builder: (context, trenutniMode, _) {
+                          // Provjeravamo je li aktivan tamni način (uzimajući u obzir i system mode ako je podešen)
+                          final bool isDark = trenutniMode == ThemeMode.dark || 
+                              (trenutniMode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
+                          
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded, 
+                                  color: boje.A, 
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: Text(
+                                    isDark ? "Tamni način rada" : "Svijetli način rada",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: boje.A,
+                                    ),
+                                  ),
+                                ),
+                                Switch(
+                                  value: isDark,
+                                  activeColor: boje.A,
+                                  activeTrackColor: boje.A?.withValues(alpha: 0.4),
+                                  inactiveThumbColor: boje.A,
+                                  inactiveTrackColor: boje.bg,
+                                  onChanged: (val) {
+                                    themeNotifier.value = val ? ThemeMode.dark : ThemeMode.light;
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                      _PostavkaItem(ikona: Icons.grid_view_rounded, naslov: "Broj oglasa po stranici", boje: boje, onTap: () {}),
+                      _PostavkaItem(ikona: Icons.format_size_rounded, naslov: "Veličina fonta", boje: boje, onTap: () {}),
+                      _PostavkaItem(ikona: Icons.contrast_rounded, naslov: "Visok kontrast", boje: boje, onTap: () {}),
                       _PostavkaItem(
                         ikona: Icons.check_box_outlined, 
                         naslov: "Prihvaćene postavke", 
+                        boje: boje,
                         onTap: () {}, 
                         isZadnji: true
                       ),
-                    ]),
+                    ], boje),
                   ],
                 ),
               ),
@@ -173,20 +214,20 @@ class PostavkeEkran extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, Color boja) {
+  Widget _buildHeader(BuildContext context, QuickJobsColors boje) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Row(
         children: [
           IconButton(
             onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios_new, size: 22),
+            icon: Icon(Icons.arrow_back_ios_new, size: 22, color: boje.A),
           ),
           Expanded(
             child: Text(
               "Postavke",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: boja),
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: boje.A),
             ),
           ),
           const SizedBox(width: 40),
@@ -195,12 +236,11 @@ class PostavkeEkran extends StatelessWidget {
     );
   }
 
-  Widget _buildPostavkeGrupa(List<Widget> items) {
+  Widget _buildPostavkeGrupa(List<Widget> items, QuickJobsColors boje) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.4),
+        color: boje.C,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF4A2C29).withOpacity(0.3)),
       ),
       child: Column(children: items),
     );
@@ -211,6 +251,7 @@ class _PostavkaItem extends StatelessWidget {
   final IconData ikona;
   final String naslov;
   final VoidCallback onTap;
+  final QuickJobsColors boje;
   final bool isZadnji;
   final Color? bojaTeksta;
   final Color? bojaIkone;
@@ -219,6 +260,7 @@ class _PostavkaItem extends StatelessWidget {
     required this.ikona,
     required this.naslov,
     required this.onTap,
+    required this.boje,
     this.isZadnji = false,
     this.bojaTeksta,
     this.bojaIkone,
@@ -226,40 +268,40 @@ class _PostavkaItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Column(
-        children: [
-          Padding(
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
             child: Row(
               children: [
-                Icon(ikona, color: bojaIkone ?? const Color(0xFF4A2C29), size: 24),
+                Icon(ikona, color: bojaIkone ?? boje.A, size: 24),
                 const SizedBox(width: 20),
                 Expanded(
                   child: Text(
                     naslov,
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: bojaTeksta ?? Colors.black87,
+                      fontWeight: FontWeight.w600,
+                      color: bojaTeksta ?? boje.A,
                     ),
                   ),
                 ),
-                const Icon(Icons.chevron_right, color: Colors.black26),
+                Icon(Icons.chevron_right, color: boje.A?.withValues(alpha: 0.4)),
               ],
             ),
           ),
-          if (!isZadnji)
-            Divider(
-              height: 1,
-              indent: 60,
-              endIndent: 20,
-              color: const Color(0xFF4A2C29).withOpacity(0.1),
-            ),
-        ],
-      ),
+        ),
+        if (!isZadnji)
+          Divider(
+            height: 1,
+            indent: 60,
+            endIndent: 20,
+            color: boje.A?.withValues(alpha: 0.15),
+          ),
+      ],
     );
   }
 }

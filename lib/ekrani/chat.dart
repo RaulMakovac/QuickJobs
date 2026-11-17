@@ -32,23 +32,23 @@ class _ChatIndividualniState extends State<ChatIndividualni> {
   final _porukaController = TextEditingController();
   final supabase = Supabase.instance.client;
   late final String mojId;
-Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
-  // Ovo je identična logika kao u Oglas.fromJson
-  final data = await supabase
-      .from('profiles')
-      .select('puno_ime') // Dohvaćamo samo ono što nam treba
-      .eq('id', widget.sugovornikId)
-      .maybeSingle();
-      
-  return data ?? {'puno_ime': 'Nepoznati korisnik'};
-}
+
+  Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
+    final data = await supabase
+        .from('profiles')
+        .select('puno_ime')
+        .eq('id', widget.sugovornikId)
+        .maybeSingle();
+        
+    return data ?? {'puno_ime': 'Nepoznati korisnik'};
+  }
+
   @override
   void initState() {
     mojId = supabase.auth.currentUser!.id;
     super.initState();
   }
 
-  // --- LOGIKA ZA NAVIGACIJU NA OGLAS UNUTAR CHATA ---
   Future<void> _navigirajNaOglas() async {
     try {
       final res = await supabase.from('oglasi').select().eq('id', widget.oglasId).maybeSingle();
@@ -62,7 +62,7 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
   }
 
   Future<void> _posaljiPoruku(bool chatZakljucan) async {
-    if (chatZakljucan) return; // Dvostruka sigurnost
+    if (chatZakljucan) return;
     final tekst = _porukaController.text.trim();
     if (tekst.isEmpty) return;
     _porukaController.clear();
@@ -73,15 +73,16 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Greška: $e")));
     }
   }
-//nakon gotovog posla, korisnik može odmah obrisati chat, bez čekanja 30 dana kad se automatski briše (supabase trigger)
-  Future<void> _obrisiChatOdmah() async {
+
+  Future<void> _obrisiChatOdmah(QuickJobsColors boje) async {
     final potvrda = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Obriši razgovor?"),
-        content: const Text("Želite li odmah trajno obrisati ovaj razgovor?"),
+        backgroundColor: boje.bg,
+        title: Text("Obriši razgovor?", style: TextStyle(color: boje.A)),
+        content: Text("Želite li odmah trajno obrisati ovaj razgovor?", style: TextStyle(color: boje.A)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Ne")),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text("Ne", style: TextStyle(color: boje.A))),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Obriši", style: TextStyle(color: Colors.red))),
         ],
       ),
@@ -94,43 +95,40 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
 
   @override
   Widget build(BuildContext context) {
-    // status sobe pratimo direktno iz baze, jer se može promijeniti (arhivirati) i dok je korisnik u chatu, pa tako odmah reagiramo na tu promjenu
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
+
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: supabase.from('chat_sobe').stream(primaryKey: ['id']).eq('id', widget.sobaId),
       builder: (context, snapshot) {
-        // Provjeravamo status iz baze, ako stream još nije povukao podatke koristi se početni widget.jeArhiviran
         bool arhiviranIzBaze = widget.jeArhiviran;
         if (snapshot.hasData && snapshot.data!.isNotEmpty) {
           arhiviranIzBaze = snapshot.data!.first['status'] == 'arhivirano';
         }
 
-        final bojaHeader = arhiviranIzBaze ? Colors.grey[700]! : const Color(0xFFBFA2A2);
-        final bojaPozadine = arhiviranIzBaze ? const Color(0xFFD1CBC9) : const Color(0xFFE5D9D6);
-
         return Scaffold(
-          backgroundColor: bojaPozadine,
+          backgroundColor: boje.bg,
           appBar: AppBar(
             toolbarHeight: 90,
-            backgroundColor: bojaHeader,
+            backgroundColor: arhiviranIzBaze ? boje.B : boje.C,
             automaticallyImplyLeading: false,
             elevation: 0,
             actions: [
               if (arhiviranIzBaze)
-                IconButton(icon: const Icon(Icons.delete_forever, color: Colors.white), onPressed: _obrisiChatOdmah),
+                IconButton(icon: Icon(Icons.delete_forever, color: boje.A), onPressed: () => _obrisiChatOdmah(boje)),
             ],
-            title: _buildAppBarTitle(),
+            title: _buildAppBarTitle(boje),
           ),
           body: PozadinaKrugovi(
+            krugBoja: boje.C,
             child: Column(
               children: [
                 Expanded(
                   child: Opacity(
                     opacity: arhiviranIzBaze ? 0.6 : 1.0,
-                    child: _buildMessagesStream(),
+                    child: _buildMessagesStream(boje),
                   ),
                 ),
-                // Ako je arhiviran, prikaži banner arhiviranosti, inače input polje
-                arhiviranIzBaze ? _buildArhiviranBanner() : _buildInputArea(arhiviranIzBaze),
+                arhiviranIzBaze ? _buildArhiviranBanner(boje) : _buildInputArea(arhiviranIzBaze, boje),
               ],
             ),
           ),
@@ -139,56 +137,53 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
     );
   }
 
- Widget _buildAppBarTitle() {
-  return Row(
-    children: [
-      IconButton(
-        onPressed: () => Navigator.pop(context), 
-        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 22)
-      ),
-      GestureDetector(
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => KorisnickiProfil(prikazaniKorisnikId: widget.sugovornikId))),
-        child: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.person_outline, color: Colors.black)),
-      ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // --- OVDJE DOHVAĆAM IME IZ BAZE ---
-            FutureBuilder<Map<String, dynamic>>(
-              future: _dohvatiPodatkeSugovornika(),
-              builder: (context, snapshot) {
-                // Dok se učitava, prikaži ime iz widgeta (da ne bude prazno) nitpick ali izgledalo mi je ružno bez ovog
-                final ime = snapshot.hasData ? snapshot.data!['puno_ime'] : widget.imeSugovornika;
-                
-                return Text(
-                  ime, 
-                  style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
-                  overflow: TextOverflow.ellipsis,
-                );
-              },
-            ),
-            const SizedBox(height: 6),
-            GestureDetector(
-              onTap: _navigirajNaOglas,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: const Color(0xFF8F6E68), borderRadius: BorderRadius.circular(15)),
-                child: Text(
-                  widget.naslovOglasa, 
-                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)
+  Widget _buildAppBarTitle(QuickJobsColors boje) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: () => Navigator.pop(context), 
+          icon: Icon(Icons.arrow_back_ios_new, color: boje.A, size: 22)
+        ),
+        GestureDetector(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => KorisnickiProfil(prikazaniKorisnikId: widget.sugovornikId))),
+          child: CircleAvatar(backgroundColor: boje.bg, child: Icon(Icons.person_outline, color: boje.A)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FutureBuilder<Map<String, dynamic>>(
+                future: _dohvatiPodatkeSugovornika(),
+                builder: (context, snapshot) {
+                  final ime = snapshot.hasData ? snapshot.data!['puno_ime'] : widget.imeSugovornika;
+                  return Text(
+                    ime, 
+                    style: TextStyle(color: boje.A, fontSize: 16, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  );
+                },
+              ),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: _navigirajNaOglas,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(color: boje.A, borderRadius: BorderRadius.circular(15)),
+                  child: Text(
+                    widget.naslovOglasa, 
+                    style: TextStyle(color: boje.bg, fontSize: 10, fontWeight: FontWeight.bold)
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 
-  Widget _buildMessagesStream() {
+  Widget _buildMessagesStream(QuickJobsColors boje) {
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: supabase.from('poruke').stream(primaryKey: ['id']).eq('soba_id', widget.sobaId).order('created_at', ascending: false),
       builder: (context, snapshot) {
@@ -197,35 +192,35 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
           reverse: true,
           padding: const EdgeInsets.all(16),
           itemCount: poruke.length,
-          itemBuilder: (context, index) => _buildChatBubble(poruke[index]['tekst'], poruke[index]['created_at'], poruke[index]['posiljatelj_id'] == mojId),
+          itemBuilder: (context, index) => _buildChatBubble(poruke[index]['tekst'], poruke[index]['created_at'], poruke[index]['posiljatelj_id'] == mojId, boje),
         );
       },
     );
   }
 
-  Widget _buildArhiviranBanner() {
+  Widget _buildArhiviranBanner(QuickJobsColors boje) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.1),
-        border: const Border(top: BorderSide(color: Colors.black12)),
+        color: boje.C?.withValues(alpha: 0.3),
+        border: Border(top: BorderSide(color: boje.A!.withValues(alpha: 0.2))),
       ),
-      child: const Column(
+      child: Column(
         children: [
-          Icon(Icons.lock_clock_outlined, color: Colors.black45),
-          SizedBox(height: 8),
-          Text("Razgovor je arhiviran jer je posao završen.", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54)),
-          Text("Slanje poruka više nije moguće.", style: TextStyle(fontSize: 12, color: Colors.black45)),
+          Icon(Icons.lock_clock_outlined, color: boje.A?.withValues(alpha: 0.6)),
+          const SizedBox(height: 8),
+          Text("Razgovor je arhiviran jer je posao završen.", style: TextStyle(fontWeight: FontWeight.bold, color: boje.A)),
+          Text("Slanje poruka više nije moguće.", style: TextStyle(fontSize: 12, color: boje.A?.withValues(alpha: 0.7))),
         ],
       ),
     );
   }
 
-  Widget _buildInputArea(bool zakljucano) {
+  Widget _buildInputArea(bool zakljucano, QuickJobsColors boje) {
     return Container(
       padding: const EdgeInsets.all(12),
-      color: const Color(0xFFBEA3A3),
+      color: boje.C,
       child: SafeArea(
         child: Row(
           children: [
@@ -233,9 +228,11 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
               child: TextField(
                 controller: _porukaController,
                 enabled: !zakljucano,
+                style: TextStyle(color: boje.A),
                 decoration: InputDecoration(
                   hintText: "Upišite poruku...",
-                  fillColor: const Color(0xFFE5D9D6),
+                  hintStyle: TextStyle(color: boje.A?.withValues(alpha: 0.5)),
+                  fillColor: boje.bg,
                   filled: true,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
                 ),
@@ -243,10 +240,10 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
             ),
             const SizedBox(width: 8),
             CircleAvatar(
-              backgroundColor: const Color(0xFF4A2C29),
+              backgroundColor: boje.A,
               child: IconButton(
                 onPressed: () => _posaljiPoruku(zakljucano), 
-                icon: const Icon(Icons.send, color: Colors.white, size: 20)
+                icon: Icon(Icons.send, color: boje.bg, size: 20)
               ),
             ),
           ],
@@ -255,7 +252,7 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
     );
   }
 
-  Widget _buildChatBubble(String tekst, String vrijeme, bool ja) {
+  Widget _buildChatBubble(String tekst, String vrijeme, bool ja, QuickJobsColors boje) {
     final formatirano = DateFormat('HH:mm').format(DateTime.parse(vrijeme));
     return Align(
       alignment: ja ? Alignment.centerRight : Alignment.centerLeft,
@@ -263,15 +260,15 @@ Future<Map<String, dynamic>> _dohvatiPodatkeSugovornika() async {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: ja ? Colors.white : const Color(0xFFC7B1AA),
+          color: ja ? boje.C : boje.B,
           borderRadius: BorderRadius.circular(15),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(tekst, style: const TextStyle(fontSize: 15)),
+            Text(tekst, style: TextStyle(fontSize: 15, color: boje.A)),
             const SizedBox(height: 4),
-            Text(formatirano, style: const TextStyle(fontSize: 10, color: Colors.black38)),
+            Text(formatirano, style: TextStyle(fontSize: 10, color: boje.A?.withValues(alpha: 0.5))),
           ],
         ),
       ),
