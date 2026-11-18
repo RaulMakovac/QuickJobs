@@ -1,83 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:quickjobs/ekrani/oglas.dart';
+import '/services/oglas_service.dart';
 import 'korisnicki_profil.dart';
 import '../dekor.dart';
 import 'postavke.dart';
 import '../banProvjera.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-
-// --- MODEL Oglas ---
-class Oglas {
-  final String id;
-  final String naslov;
-  final String opis;
-  final String isplata;
-  final String adresa;
-  final String status;
-  final String? autorIme;
-  final String? autorId;
-  final String? obavljacId;
-  final DateTime createdAt;
-  final bool jeReportan;
-  final String kategorija;
-
-  Oglas({
-    required this.id,
-    required this.naslov,
-    required this.opis,
-    required this.isplata,
-    required this.adresa,
-    required this.status,
-    this.autorIme,
-    this.autorId,
-    this.obavljacId,
-    required this.createdAt,
-    this.jeReportan = false,
-    this.kategorija = "Ostalo",
-  });
-
-  Oglas copyWith({String? autorIme}) { 
-    return Oglas(
-      id: id,
-      naslov: naslov,
-      opis: opis,
-      isplata: isplata,
-      adresa: adresa,
-      status: status,
-      autorId: autorId,
-      obavljacId: obavljacId,
-      createdAt: createdAt,
-      autorIme: autorIme ?? this.autorIme,
-      jeReportan: jeReportan,
-      kategorija: kategorija,
-    );
-  }
-
-  factory Oglas.fromJson(Map<String, dynamic> json) {
-    final profileData = json['autor'] as Map<String, dynamic>?;
-    final reportsList = json['reports'] as List?;
-    bool reportan = reportsList != null && reportsList.isNotEmpty;
-
-    return Oglas(
-      id: json['id'] ?? '',
-      naslov: json['naslov_oglasa'] ?? 'Bez naslova',
-      opis: json['opis_oglasa'] ?? '',
-      isplata: json['isplata_oglasa']?.toString() ?? '0',
-      adresa: json['adresa_oglasa'] ?? '',
-      status: json['status_oglasa'] ?? 'otvoren',
-      obavljacId: json['obavljac_id'],
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : DateTime.now(),
-      autorId: profileData?['id'] ?? json['autor_id']?.toString(),
-      autorIme: profileData?['puno_ime'] ?? 'Autor oglasa',
-      jeReportan: reportan,
-      kategorija: json['kategorija'] ?? 'Ostalo',
-    );
-  }
-}
 
 class glavni_ekran extends StatefulWidget {
   const glavni_ekran({super.key});
@@ -87,60 +16,13 @@ class glavni_ekran extends StatefulWidget {
 }
 
 class _glavni_ekranState extends State<glavni_ekran> {
-  final supabase = Supabase.instance.client;
+  final OglasService _oglasService = OglasService();
   final TextEditingController _searchController = TextEditingController();
 
   String _searchQuery = "";
   double _minIsplata = 0;
   String? _odabranaKategorija;
   bool _prikaziFiltere = false;
-
-  Future<List<Oglas>> dohvatiOglase() async {
-    try {
-      final user = supabase.auth.currentUser;
-      if (user == null) return [];
-
-      final prijaveResponse = await supabase
-          .from('prijave')
-          .select('oglas_id')
-          .eq('korisnik_id', user.id);
-      final prijavljeniOglasiIds = (prijaveResponse as List)
-          .map((item) => item['oglas_id'].toString())
-          .toList();
-
-      var query = supabase
-          .from('oglasi')
-          .select(
-            '*, autor:profiles!oglasi_autor_id_fkey(puno_ime), reports(id)',
-          )
-          .eq('status_oglasa', 'otvoren')
-          .filter('obavljac_id', 'is', null);
-
-      if (prijavljeniOglasiIds.isNotEmpty) {
-        query = query.not('id', 'in', '(${prijavljeniOglasiIds.join(',')})');
-      }
-
-      query = query.neq('autor_id', user.id);
-
-      if (_searchQuery.isNotEmpty) {
-        query = query.ilike('naslov_oglasa', '%$_searchQuery%');
-      }
-
-      if (_minIsplata > 0) {
-        query = query.gte('isplata_oglasa', _minIsplata);
-      }
-
-      if (_odabranaKategorija != null &&
-          _odabranaKategorija != "Sve kategorije") {
-        query = query.eq('kategorija', _odabranaKategorija!);
-      }
-
-      final response = await query.order('created_at', ascending: false);
-      return (response as List).map((json) => Oglas.fromJson(json)).toList();
-    } catch (e) {
-      return [];
-    }
-  }
 
   @override
   void initState() {
@@ -154,8 +36,21 @@ class _glavni_ekranState extends State<glavni_ekran> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<List<Oglas>> _dohvatiOglase() {
+    return _oglasService.dohvatiDostupneOglase(
+      searchQuery: _searchQuery,
+      minIsplata: _minIsplata,
+      odabranaKategorija: _odabranaKategorija,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Dohvaćamo definirane boje i provjeravamo aktivni mod teme
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -241,7 +136,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
               SliverPadding(
                 padding: const EdgeInsets.only(top: 5, bottom: 20),
                 sliver: FutureBuilder<List<Oglas>>(
-                  future: dohvatiOglase(),
+                  future: _dohvatiOglase(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return SliverToBoxAdapter(
@@ -301,8 +196,8 @@ class _glavni_ekranState extends State<glavni_ekran> {
 
   Widget _buildCentralLogo(bool isDark) {
     return SvgPicture.asset(
-      isDark 
-          ? 'assets/images/logo_darkmode.svg' 
+      isDark
+          ? 'assets/images/logo_darkmode.svg'
           : 'assets/images/logo_lightmode.svg',
       width: 75,
       height: 75,
@@ -339,7 +234,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
   }
 
   Widget _buildFilterPanel(QuickJobsColors boje) {
-    List<String> stavkeKategorija = [
+    final List<String> stavkeKategorija = [
       "Sve kategorije",
       ...kategorijeSaIkonama.keys,
     ];
@@ -579,7 +474,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
           ),
           IconButton(
             icon: Icon(
-              Icons.chat_bubble_outline,
+              Icons.chat,
               size: 30,
               color: boje.A,
             ),
@@ -614,7 +509,7 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) {
     return Container(
-      color: bgColor, 
+      color: bgColor,
       child: ClipRect(
         child: OverflowBox(
           minHeight: 0,

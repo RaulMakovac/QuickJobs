@@ -17,19 +17,27 @@ import 'ekrani/jednostavni_ekran.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
   ErrorWidget.builder = (FlutterErrorDetails details) {
     bool isOverflowError = details.toString().contains('Bottom overflowed');
-    if (isOverflowError) return const SizedBox.shrink(); // Sakrij samo overflow
-    return ErrorWidget(details.exception); // Pokaži ostale greške
+    if (isOverflowError) return const SizedBox.shrink();
+    return ErrorWidget(details.exception);
   };
   
-  // Učitavanje .env datoteke
-  await dotenv.load(fileName: ".env");
+  // Sigurno učitavanje .env datoteke s hvatanjem greške
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    print('UPOZORENJE: Nije uspjelo učitavanje .env datoteke: $e');
+  }
   
-  // Inicijalizacija Supabasea koristeći dotenv
+  // Inicijalizacija Supabasea uz sigurnu provjeru (fallback ako dotenv faila)
+  final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? 'https://ovdje-stavi-fallback-url-za-test.supabase.co';
+  final supabaseKey = dotenv.env['SUPABASE_ANON_KEY'] ?? 'fallback-anon-key';
+
   await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL'] ?? '', 
-    anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+    url: supabaseUrl, 
+    anonKey: supabaseKey,
     authOptions: const FlutterAuthClientOptions(
       authFlowType: AuthFlowType.pkce,
     ),
@@ -37,6 +45,7 @@ void main() async {
 
   runApp(const MyApp());
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

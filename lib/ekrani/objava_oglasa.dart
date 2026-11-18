@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/oglas_service.dart';
 import '../dekor.dart';
 
 class ObjavaOglasa extends StatefulWidget {
@@ -10,24 +10,31 @@ class ObjavaOglasa extends StatefulWidget {
 }
 
 class _ObjavaOglasaState extends State<ObjavaOglasa> {
+  final OglasService _oglasService = OglasService();
+
   final _naslovController = TextEditingController();
   final _adresaController = TextEditingController();
   final _isplataController = TextEditingController();
   final _opisController = TextEditingController();
 
-  String _odabranaKategorija = "Ostalo"; // Početna kategorija
-
+  String _odabranaKategorija = "Ostalo";
   bool _isLoading = false;
-  final supabase = Supabase.instance.client;
+
+  @override
+  void dispose() {
+    _naslovController.dispose();
+    _adresaController.dispose();
+    _isplataController.dispose();
+    _opisController.dispose();
+    super.dispose();
+  }
 
   Future<void> _objaviOglas() async {
     final naslov = _naslovController.text.trim();
     final adresa = _adresaController.text.trim();
     final isplata = _isplataController.text.trim();
     final opis = _opisController.text.trim();
-    final user = supabase.auth.currentUser;
 
-    // --- VALIDACIJA ---
     if (naslov.isEmpty || adresa.isEmpty || isplata.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -41,18 +48,16 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
     setState(() => _isLoading = true);
 
     try {
-      await supabase.from('oglasi').insert({
-        'autor_id': user!.id,
-        'naslov_oglasa': naslov,
-        'adresa_oglasa': adresa,
-        'isplata_oglasa': isplata,
-        'opis_oglasa': opis,
-        'kategorija': _odabranaKategorija,
-        'status_oglasa': 'otvoren',
-      });
+      await _oglasService.objaviOglas(
+        naslov: naslov,
+        adresa: adresa,
+        isplata: isplata,
+        opis: opis,
+        kategorija: _odabranaKategorija,
+      );
 
       if (mounted) {
-        Navigator.pop(context); // Vrati se na glavni ekran
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Oglas uspješno objavljen!'),
@@ -61,12 +66,14 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Greška pri objavi: $e'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Greška pri objavi: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -74,7 +81,6 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
 
   @override
   Widget build(BuildContext context) {
-    // Dohvaćamo definirane boje iz dekor.dart
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
 
     return Scaffold(
@@ -118,7 +124,6 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                 ),
                 const SizedBox(height: 30),
 
-                // Slika i Naziv (Redak)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -150,7 +155,6 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                 _customField("Isplata:", _isplataController, boje, isNumber: true),
                 const SizedBox(height: 15),
 
-                // Opis (Veliko polje)
                 Container(
                   height: 180,
                   padding: const EdgeInsets.symmetric(horizontal: 15),
@@ -164,13 +168,13 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                     maxLines: null,
                     style: TextStyle(
                       color: boje.A,
-                      fontWeight: FontWeight.w600, // Podebljani tekst opisa
+                      fontWeight: FontWeight.w600,
                     ),
                     decoration: InputDecoration(
                       hintText: "Opis posla...",
                       hintStyle: TextStyle(
                         color: boje.A?.withValues(alpha: 1.0),
-                        fontWeight: FontWeight.w600, // Podebljani hint opisa
+                        fontWeight: FontWeight.w600,
                       ),
                       border: InputBorder.none,
                     ),
@@ -178,7 +182,6 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                 ),
                 const SizedBox(height: 15),
 
-                // ODABIR KATEGORIJE
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 15,
@@ -195,7 +198,7 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                     style: TextStyle(
                       color: boje.A, 
                       fontSize: 16,
-                      fontWeight: FontWeight.w600, // Podebljani tekst kategorije
+                      fontWeight: FontWeight.w600,
                     ),
                     decoration: const InputDecoration(
                       border: InputBorder.none,
@@ -238,7 +241,6 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
 
                 const SizedBox(height: 40),
 
-                // Gumb za objavu (Kvačica)
                 GestureDetector(
                   onTap: _isLoading ? null : _objaviOglas,
                   child: Container(
@@ -295,13 +297,13 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
         style: TextStyle(
           color: boje.A,
-          fontWeight: FontWeight.w600, // Podebljani tekst unosa
+          fontWeight: FontWeight.w600,
         ),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(
             color: boje.A?.withValues(alpha: 1.0),
-            fontWeight: FontWeight.w600, // Podebljani hint tekst
+            fontWeight: FontWeight.w600,
           ),
           border: InputBorder.none,
         ),

@@ -1,28 +1,31 @@
 import 'package:flutter/material.dart';
-import '/ekrani/glavni_ekran.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/oglas_service.dart';
+import '../services/prijava_service.dart';
+import '../services/report_service.dart';
 import '../dekor.dart';
-import '/ekrani/korisnicki_profil.dart';
+import 'korisnicki_profil.dart';
 
 class DetaljiOglasa extends StatelessWidget {
   final Oglas oglas;
   final bool samoPregled;
 
-  const DetaljiOglasa({
+  DetaljiOglasa({
     super.key,
     required this.oglas,
-    this.samoPregled = false, 
+    this.samoPregled = false,
   });
+
+  final PrijavaService _prijavaService = PrijavaService();
+  final ReportService _reportService = ReportService();
 
   @override
   Widget build(BuildContext context) {
-    // Dohvaćamo definirane boje iz dekor.dart
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
 
     return Scaffold(
       backgroundColor: boje.bg,
       body: PozadinaKrugovi(
-        krugBoja: boje.C, // Koristi globalni sustav krugova
+        krugBoja: boje.C,
         child: SafeArea(
           bottom: false,
           child: SingleChildScrollView(
@@ -34,11 +37,10 @@ class DetaljiOglasa extends StatelessWidget {
                 const SizedBox(height: 35),
                 _buildJobTitleHeader(boje),
                 
-                // Prikaz odabrane kategorije posla ispod naslova
                 const SizedBox(height: 15),
                 _buildKategorijaBadge(boje),
                 
-                // --- KONTROLIRANI RAZMAK I BANNER ---
+                // UPOZORENJE ZAJEDNICE (REPORTS)
                 if (oglas.jeReportan) ...[
                   const SizedBox(height: 25),
                   Container(
@@ -103,7 +105,6 @@ class DetaljiOglasa extends StatelessWidget {
 
                 const SizedBox(height: 45),
 
-                // --- UVJETNI PRIKAZ GUMBA ---
                 if (samoPregled)
                   Column(
                     children: [
@@ -129,7 +130,6 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  // --- BADGE INDIKATOR KATEGORIJE ---
   Widget _buildKategorijaBadge(QuickJobsColors boje) {
     final nazivKategorije = oglas.kategorija;
     final ikonaKategorije = kategorijeSaIkonama[nazivKategorije] ?? Icons.more_horiz_rounded;
@@ -159,7 +159,6 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  // --- SEKCIJA AUTORA ---
   Widget _buildAuthorSection(BuildContext context, QuickJobsColors boje) {
     return GestureDetector(
       onTap: () {
@@ -231,7 +230,6 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  // --- GUMB ZA PRIJAVU NA OGLAS---
   Widget _buildApplyButton(BuildContext context, QuickJobsColors boje) {
     return Column(
       children: [
@@ -264,19 +262,8 @@ class DetaljiOglasa extends StatelessWidget {
   }
 
   Future<void> _handlePrijava(BuildContext context) async {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-
-    if (user == null) {
-      _showSnack(context, 'Morate biti prijavljeni!', isError: true);
-      return;
-    }
-
     try {
-      await supabase.from('prijave').insert({
-        'oglas_id': oglas.id,
-        'korisnik_id': user.id,
-      });
+      await _prijavaService.prijavaNaOglas(oglas.id);
 
       if (context.mounted) {
         _showSnack(context, 'Uspješno prijavljeni!', isError: false);
@@ -313,7 +300,7 @@ class DetaljiOglasa extends StatelessWidget {
           ),
           tooltip: "Prijavi oglas",
           onPressed: () {
-            _prikaziDijalogZaPrijavuOglasa(context, oglas.id, boje);
+            _prikaziDijalogZaPrijavuOglasa(context, boje);
           },
         ),
       ],
@@ -415,7 +402,7 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  void _prikaziDijalogZaPrijavuOglasa(BuildContext context, String oglasId, QuickJobsColors boje) {
+  void _prikaziDijalogZaPrijavuOglasa(BuildContext context, QuickJobsColors boje) {
     String odabraniRazlog = "Scam / Prijevara";
     final komentarController = TextEditingController();
 
@@ -491,25 +478,20 @@ class DetaljiOglasa extends StatelessWidget {
                 foregroundColor: boje.bg,
               ),
               onPressed: () async {
-                final user = Supabase.instance.client.auth.currentUser;
-                if (user == null) return;
-
                 try {
-                  await Supabase.instance.client.from('reports').insert({
-                    'prijavitelj_id': user.id,
-                    'oglas_id': oglasId,
-                    'razlog': odabraniRazlog,
-                    'komentar': komentarController.text,
-                  });
+                  await _reportService.prijaviOglas(
+                    oglasId: oglas.id,
+                    razlog: odabraniRazlog,
+                    komentar: komentarController.text,
+                  );
 
                   if (context.mounted) {
                     Navigator.pop(context);
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Oglas prijavljen. Hvala na povratnoj informaciji!"),
-                        backgroundColor: Colors.green,
-                      ),
+                    _showSnack(
+                      context,
+                      "Oglas prijavljen. Hvala na povratnoj informaciji!",
+                      isError: false,
                     );
                   }
                 } catch (e) {

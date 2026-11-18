@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../dekor.dart'; 
-import '/ekrani/glavni_ekran.dart';
+import '../dekor.dart';
+import '../services/oglas_service.dart';
 
 class AzurirajOglas extends StatefulWidget {
   final Oglas oglas;
@@ -12,12 +11,14 @@ class AzurirajOglas extends StatefulWidget {
 }
 
 class _AzurirajOglasState extends State<AzurirajOglas> {
-  final supabase = Supabase.instance.client;
+  final OglasService _oglasService = OglasService();
 
   late TextEditingController _naslovController;
   late TextEditingController _opisController;
   late TextEditingController _isplataController;
   late TextEditingController _adresaController;
+
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -28,17 +29,41 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
     _adresaController = TextEditingController(text: widget.oglas.adresa);
   }
 
+  @override
+  void dispose() {
+    _naslovController.dispose();
+    _opisController.dispose();
+    _isplataController.dispose();
+    _adresaController.dispose();
+    super.dispose();
+  }
+
   Future<void> _updateOglas() async {
+    if (_isLoading) return;
+
+    if (_naslovController.text.trim().isEmpty ||
+        _adresaController.text.trim().isEmpty ||
+        _isplataController.text.trim().isEmpty ||
+        _opisController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Molimo ispunite sva polja prije spremanja."),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
     try {
-      await supabase
-          .from('oglasi')
-          .update({
-            'naslov_oglasa': _naslovController.text,
-            'opis_oglasa': _opisController.text,
-            'isplata_oglasa': _isplataController.text,
-            'adresa_oglasa': _adresaController.text,
-          })
-          .eq('id', widget.oglas.id);
+      await _oglasService.azurirajOglas(
+        oglasId: widget.oglas.id,
+        naslov: _naslovController.text,
+        opis: _opisController.text,
+        isplata: _isplataController.text,
+        adresa: _adresaController.text,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -50,9 +75,15 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
         Navigator.pop(context, true);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Greška: $e"), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Greška: $e"), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -119,7 +150,7 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
                       ),
                       const SizedBox(height: 40),
                       GestureDetector(
-                        onTap: _updateOglas,
+                        onTap: _isLoading ? null : _updateOglas,
                         child: Column(
                           children: [
                             Container(
@@ -129,15 +160,23 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
                                 color: boje.A,
                                 shape: BoxShape.circle,
                               ),
-                              child: Icon(
-                                Icons.check_rounded,
-                                size: 45,
-                                color: boje.bg,
-                              ),
+                              child: _isLoading
+                                  ? Padding(
+                                      padding: const EdgeInsets.all(22.0),
+                                      child: CircularProgressIndicator(
+                                        color: boje.bg,
+                                        strokeWidth: 3,
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.check_rounded,
+                                      size: 45,
+                                      color: boje.bg,
+                                    ),
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              "Spremi promjene",
+                              _isLoading ? "Spremanje..." : "Spremi promjene",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: boje.A,
@@ -159,7 +198,11 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, QuickJobsColors boje, String naslovPosla) {
+  Widget _buildHeader(
+    BuildContext context,
+    QuickJobsColors boje,
+    String naslovPosla,
+  ) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Row(

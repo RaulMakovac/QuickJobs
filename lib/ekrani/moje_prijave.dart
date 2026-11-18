@@ -1,31 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '/ekrani/glavni_ekran.dart';
+import '../services/prijava_service.dart';
 import '../dekor.dart';
 import 'oglas.dart';
-
-class Prijava {
-  final String id;
-  final String oglasId;
-  final Oglas oglas;
-  final DateTime createdAt;
-
-  Prijava({
-    required this.id,
-    required this.oglasId,
-    required this.oglas,
-    required this.createdAt,
-  });
-
-  factory Prijava.fromJson(Map<String, dynamic> json) {
-    return Prijava(
-      id: json['id'],
-      oglasId: json['oglas_id'],
-      oglas: Oglas.fromJson(json['oglasi']), 
-      createdAt: DateTime.parse(json['created_at']),
-    );
-  }
-}
 
 class MojePrijaveEkran extends StatefulWidget {
   const MojePrijaveEkran({super.key});
@@ -35,39 +12,11 @@ class MojePrijaveEkran extends StatefulWidget {
 }
 
 class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
+  final PrijavaService _prijavaService = PrijavaService();
   final supabase = Supabase.instance.client;
 
-  Future<List<Prijava>> _dohvatiMojePrijave() async {
-    final user = supabase.auth.currentUser;
-    if (user == null) return [];
-
-    try {
-      final response = await supabase
-          .from('prijave')
-          .select('''
-            *,
-            oglasi:oglas_id (
-              id,
-              naslov_oglasa,   
-              opis_oglasa,       
-              isplata_oglasa, 
-              adresa_oglasa,   
-              status_oglasa,   
-              kategorija,       
-              autor_id,
-              obavljac_id,
-              created_at
-            )
-          ''')
-          .eq('korisnik_id', user.id)
-          .order('created_at', ascending: false);
-
-      final List data = response as List;
-      return data.map((json) => Prijava.fromJson(json)).toList();
-    } catch (e) {
-      debugPrint("Greška pri dohvaćanju: $e");
-      return [];
-    }
+  Future<List<Prijava>> _dohvatiMojePrijave() {
+    return _prijavaService.dohvatiMojePrijave();
   }
 
   Future<void> _spremiRecenzijuAutora({
@@ -76,25 +25,11 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
     String? komentar,
   }) async {
     try {
-      final user = supabase.auth.currentUser;
-      if (user == null) return;
-
-      final oglas = prijava.oglas;
-
-      if (oglas.autorId == null) {
-        throw "Greška: ID autora nije pronađen.";
-      }
-
-      await supabase.from('recenzije').insert({
-        'oglas_id': oglas.id,
-        'ocjenjivac_id': user.id,
-        'ocijenjeni_id': oglas.autorId,
-        'uloga_ocijenjenog': 'autor',
-        'ocjena': ocjena,
-        'komentar': komentar,
-      });
-
-      await supabase.from('prijave').delete().eq('id', prijava.id);
+      await _prijavaService.spremiRecenzijuAutora(
+        prijava: prijava,
+        ocjena: ocjena,
+        komentar: komentar,
+      );
 
       if (mounted) {
         setState(() {});
@@ -106,7 +41,6 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
         );
       }
     } catch (e) {
-      debugPrint("Greška pri recenziranju: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Greška: $e")));
       }
@@ -187,29 +121,10 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
 
   Future<void> _otkaziPrijavu(Prijava prijava, bool zaposlenSam) async {
     try {
-      final trenutniKorisnikId = supabase.auth.currentUser?.id;
-      if (trenutniKorisnikId == null) return;
-
-      if (zaposlenSam) {
-        await supabase
-            .from('oglasi')
-            .update({
-              'obavljac_id': null,
-              'status_oglasa': 'otvoren', 
-            })
-            .eq('id', prijava.oglasId);
-      }
-
-      await supabase
-          .from('chat_sobe')
-          .update({
-            'status': 'arhivirano',
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('oglas_id', prijava.oglasId)
-          .eq('radnik_id', trenutniKorisnikId);
-
-      await supabase.from('prijave').delete().eq('id', prijava.id);
+      await _prijavaService.otkaziPrijavu(
+        prijava: prijava,
+        zaposlenSam: zaposlenSam,
+      );
 
       if (mounted) {
         setState(() {});
@@ -225,7 +140,6 @@ class _MojePrijaveEkranState extends State<MojePrijaveEkran> {
         );
       }
     } catch (e) {
-      debugPrint("Greška pri otkazivanju: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

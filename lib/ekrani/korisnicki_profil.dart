@@ -1,58 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '/ekrani/glavni_ekran.dart';
+import '../services/profile_service.dart';
+import '../services/oglas_service.dart';
 import '../dekor.dart';
-
-// --- MODEL ZA RECENZIJU ---
-class Recenzija {
-  final String id;
-  final String ocjenjivacIme;
-  final String oglasNaslov;
-  final String? oglasKategorija;
-  final int ocjena;
-  final String? komentar;
-  final String uloga;
-  final DateTime createdAt;
-
-  Recenzija({
-    required this.id,
-    required this.ocjenjivacIme,
-    required this.oglasNaslov,
-    required this.oglasKategorija,
-    required this.ocjena,
-    this.komentar,
-    required this.uloga,
-    required this.createdAt,
-  });
-
-  factory Recenzija.fromJson(Map<String, dynamic> json) {
-    final ocjenjivacData = json['ocjenjivac'];
-    final oglasData = json['oglasi'];
-    return Recenzija(
-      id: json['id'],
-      ocjenjivacIme: ocjenjivacData != null
-          ? ocjenjivacData['puno_ime']
-          : 'Korisnik',
-      oglasNaslov: oglasData != null ? oglasData['naslov_oglasa'] : 'Posao',
-      ocjena: json['ocjena'],
-      komentar: json['komentar'],
-      uloga: json['uloga_ocijenjenog'],
-      createdAt: DateTime.parse(json['created_at']),
-      oglasKategorija: oglasData != null
-          ? (oglasData['kategorija'] ?? 'Ostalo')
-          : 'Ostalo',
-    );
-  }
-}
 
 class KorisnickiProfil extends StatefulWidget {
   final String? prikazaniKorisnikId;
   const KorisnickiProfil({super.key, this.prikazaniKorisnikId});
+
   @override
   State<KorisnickiProfil> createState() => _KorisnickiProfilState();
 }
 
 class _KorisnickiProfilState extends State<KorisnickiProfil> {
+  final ProfileService _profileService = ProfileService();
   final supabase = Supabase.instance.client;
 
   bool get jeLiMojProfil {
@@ -73,29 +34,8 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
   bool _isLoading = true;
   bool _prikaziSveRecenzije = false;
   double _prosjecnaOcjena = 0.0;
-  String _tekstOcjene = ""; 
   List<Oglas> _mojiOglasi = [];
   List<Recenzija> _recenzije = [];
-
-  Future<bool> _provjeriSmijeLiReportati(String prikazaniKorisnikId) async {
-    final user = supabase.auth.currentUser;
-    if (user == null || user.id == prikazaniKorisnikId) return false;
-
-    try {
-      final response = await supabase
-          .from('oglasi')
-          .select('id')
-          .or('status_oglasa.eq.završen,status_oglasa.eq.obavljen')
-          .or(
-            'and(autor_id.eq.${user.id},obavljac_id.eq.$prikazaniKorisnikId),and(autor_id.eq.$prikazaniKorisnikId,obavljac_id.eq.${user.id})',
-          );
-
-      return (response as List).isNotEmpty;
-    } catch (e) {
-      debugPrint("Greška pri provjeri suradnje: $e");
-      return false;
-    }
-  }
 
   @override
   void initState() {
@@ -118,48 +58,20 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
 
   Future<void> _inicijalizirajPodatke() async {
     try {
-      final profil = await supabase
-          .from('profiles')
-          .select()
-          .eq('id', ciljaniUserId)
-          .single();
-      final oglasiRes = await supabase
-          .from('oglasi')
-          .select()
-          .eq('autor_id', ciljaniUserId)
-          .limit(10);
-      final recenzijeRes = await supabase
-          .from('recenzije')
-          .select('''
-        *,
-        ocjenjivac:profiles!recenzije_ocjenjivac_id_fkey(puno_ime),
-        oglasi!recenzije_oglas_id_fkey(naslov_oglasa, kategorija)
-      ''')
-          .eq('ocijenjeni_id', ciljaniUserId)
-          .order('created_at', ascending: false);
+      final podaci = await _profileService.dohvatiPodatkeProfila(ciljaniUserId);
 
       if (mounted) {
         setState(() {
-          _imeController.text = profil['puno_ime'] ?? "";
-          _emailController.text = profil['email_adresa'] ?? "";
-          _telefonController.text = profil['telefon'] ?? "";
-          _opisController.text = profil['opis_profila'] ?? "";
-          final ocjenaIzBaze = (profil['ocjena_korisnika'] as num?)?.toDouble();
+          _imeController.text = podaci.profil['puno_ime'] ?? "";
+          _emailController.text = podaci.profil['email_adresa'] ?? "";
+          _telefonController.text = podaci.profil['telefon'] ?? "";
+          _opisController.text = podaci.profil['opis_profila'] ?? "";
+          
+          final ocjenaIzBaze = (podaci.profil['ocjena_korisnika'] as num?)?.toDouble();
+          _prosjecnaOcjena = (ocjenaIzBaze == null) ? 0.0 : ocjenaIzBaze;
 
-          if (ocjenaIzBaze == null || ocjenaIzBaze == 0.0) {
-            _prosjecnaOcjena = 0.0;
-            _tekstOcjene = "Korisnik još nije ocjenjen";
-          } else {
-            _prosjecnaOcjena = ocjenaIzBaze;
-            _tekstOcjene =
-                "Prosječna ocjena: ${_prosjecnaOcjena.toStringAsFixed(1)}";
-          }
-          _mojiOglasi = (oglasiRes as List)
-              .map((json) => Oglas.fromJson(json))
-              .toList();
-          _recenzije = (recenzijeRes as List)
-              .map((json) => Recenzija.fromJson(json))
-              .toList();
+          _mojiOglasi = podaci.oglasi;
+          _recenzije = podaci.recenzije;
           _isLoading = false;
         });
       }
@@ -170,19 +82,27 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
 
   Future<void> _spremiPromjene() async {
     try {
-      await supabase
-          .from('profiles')
-          .update({
-            'puno_ime': _imeController.text,
-            'telefon': _telefonController.text,
-            'opis_profila': _opisController.text,
-          })
-          .eq('id', ciljaniUserId);
+      await _profileService.azurirajProfil(
+        userId: ciljaniUserId,
+        punoIme: _imeController.text,
+        telefon: _telefonController.text,
+        opisProfila: _opisController.text,
+      );
       setState(() => _isEditing = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Profil uspješno ažuriran!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Greška: $e")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Greška: $e"), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -215,14 +135,14 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
     );
     if (potvrda == true) {
       await supabase.auth.signOut();
-      if (mounted)
+      if (mounted) {
         Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Dohvaćamo definirane boje iz dekor.dart
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
 
     if (_isLoading) {
@@ -301,7 +221,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                                 )
                               else
                                 FutureBuilder<bool>(
-                                  future: _provjeriSmijeLiReportati(
+                                  future: _profileService.provjeriSmijeLiReportati(
                                     ciljaniUserId,
                                   ),
                                   builder: (context, snapshot) {
@@ -440,7 +360,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: boje.B, // Mali pravokutnik koristi boju C
+              color: boje.B,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(8),
                 topRight: Radius.circular(8),
@@ -449,11 +369,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  ikona,
-                  color: boje.A,
-                  size: 14,
-                ), 
+                Icon(ikona, color: boje.A, size: 14), 
                 const SizedBox(width: 6),
                 Text(
                   label,
@@ -507,7 +423,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: boje.B, // Mali pravokutnik koristi boju C
+              color: boje.B,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(8),
                 topRight: Radius.circular(8),
@@ -813,15 +729,14 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                     borderSide: BorderSide.none,
                   ),
                 ),
-                items:
-                    [
-                          "Scam / Neisplata",
-                          "Lažno izvršen posao",
-                          "Neprimjereno ponašanje",
-                          "Ostalo",
-                        ]
-                        .map((r) => DropdownMenuItem(value: r, child: Text(r, style: TextStyle(color: boje.A))))
-                        .toList(),
+                items: [
+                  "Scam / Neisplata",
+                  "Lažno izvršen posao",
+                  "Neprimjereno ponašanje",
+                  "Ostalo",
+                ]
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r, style: TextStyle(color: boje.A))))
+                    .toList(),
                 onChanged: (v) {
                   if (v != null) {
                     setDialogState(() {
@@ -862,17 +777,12 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                 foregroundColor: boje.bg,
               ),
               onPressed: () async {
-                final user = supabase.auth.currentUser;
-                if (user == null) return;
-
                 try {
-                  await supabase.from('reports').insert({
-                    'prijavitelj_id': user.id,
-                    'oglas_id': null,
-                    'prijavljeni_korisnik_id': korisnikId,
-                    'razlog': privremeniRazlog,
-                    'komentar': komentarController.text,
-                  });
+                  await _profileService.prijaviKorisnika(
+                    prijavljeniKorisnikId: korisnikId,
+                    razlog: privremeniRazlog,
+                    komentar: komentarController.text,
+                  );
 
                   komentarController.dispose();
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:quickjobs/ekrani/jednostavni_ekran.dart';
-import 'package:quickjobs/ekrani/glavni_ekran.dart'; 
+import 'package:quickjobs/ekrani/glavni_ekran.dart';
 import '../dekor.dart';
 import 'opciUvjeti.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,7 +9,6 @@ class PostavkeEkran extends StatelessWidget {
   final bool dolaziIzJednostavnog;
   const PostavkeEkran({super.key, this.dolaziIzJednostavnog = false});
 
-  // --- LOGIKA ZA BRISANJE PROFILA I RAČUNA ---
   void _obrisiRacun(BuildContext context, QuickJobsColors boje) async {
     final supabase = Supabase.instance.client;
 
@@ -21,11 +20,15 @@ class PostavkeEkran extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.redAccent,
+              size: 28,
+            ),
             const SizedBox(width: 10),
             Text(
-              "Brisanje računa", 
-              style: TextStyle(color: boje.A, fontWeight: FontWeight.bold)
+              "Brisanje računa",
+              style: TextStyle(color: boje.A, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -36,16 +39,30 @@ class PostavkeEkran extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false), 
-            child: Text("Odustani", style: TextStyle(color: boje.A?.withValues(alpha: 0.7), fontWeight: FontWeight.bold))
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              "Odustani",
+              style: TextStyle(
+                color: boje.A?.withValues(alpha: 0.7),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            child: const Text("Briši račun", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: const Text(
+              "Briši račun",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -97,31 +114,57 @@ class PostavkeEkran extends StatelessWidget {
               _buildHeader(context, boje),
               Expanded(
                 child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 25,
+                    vertical: 10,
+                  ),
                   children: [
-                    // PRVA GRUPA: Način rada, Opći uvjeti, Brisanje računa
                     _buildPostavkeGrupa([
                       _PostavkaItem(
-                        ikona: dolaziIzJednostavnog 
-                            ? Icons.dashboard_customize_rounded 
+                        ikona: dolaziIzJednostavnog
+                            ? Icons.dashboard_customize_rounded
                             : Icons.auto_awesome_motion_rounded,
-                        naslov: dolaziIzJednostavnog 
-                            ? "Standardni način rada" 
+                        naslov: dolaziIzJednostavnog
+                            ? "Standardni način rada"
                             : "Jednostavan način rada",
                         boje: boje,
-                        onTap: () {
+                        onTap: () async {
+                          final supabase = Supabase.instance.client;
+                          final user = supabase.auth.currentUser;
+
                           if (dolaziIzJednostavnog) {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(builder: (context) => const glavni_ekran()),
-                              (route) => false,
-                            );
+                            // Prebacujemo na standardni (kandidat)
+                            if (user != null) {
+                              await supabase.auth.updateUser(
+                                UserAttributes(data: {'uloga': 'kandidat'}),
+                              );
+                            }
+                            if (context.mounted) {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const glavni_ekran(),
+                                ),
+                                (route) => false,
+                              );
+                            }
                           } else {
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(builder: (context) => const JednostavniIzbornik()),
-                              (route) => false,
-                            );
+                            // Prebacujemo na jednostavni (poslodavac)
+                            if (user != null) {
+                              await supabase.auth.updateUser(
+                                UserAttributes(data: {'uloga': 'poslodavac'}),
+                              );
+                            }
+                            if (context.mounted) {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const JednostavniIzbornik(),
+                                ),
+                                (route) => false,
+                              );
+                            }
                           }
                         },
                       ),
@@ -132,7 +175,10 @@ class PostavkeEkran extends StatelessWidget {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const UvjetiKoristenjaEkran()),
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const UvjetiKoristenjaEkran(),
+                            ),
                           );
                         },
                       ),
@@ -140,7 +186,7 @@ class PostavkeEkran extends StatelessWidget {
                         ikona: Icons.delete_forever_rounded,
                         naslov: "Obriši moj račun",
                         boje: boje,
-                        onTap: () => _obrisiRacun(context, boje),           
+                        onTap: () => _obrisiRacun(context, boje),
                         isZadnji: true,
                         bojaTeksta: Colors.redAccent,
                         bojaIkone: Colors.redAccent,
@@ -149,28 +195,36 @@ class PostavkeEkran extends StatelessWidget {
 
                     const SizedBox(height: 25),
 
-                    // DRUGA GRUPA: Izgled (Dark/Light mode toggle) i ostalo
                     _buildPostavkeGrupa([
                       ValueListenableBuilder<ThemeMode>(
                         valueListenable: themeNotifier,
                         builder: (context, trenutniMode, _) {
-                          // Provjeravamo je li aktivan tamni način (uzimajući u obzir i system mode ako je podešen)
-                          final bool isDark = trenutniMode == ThemeMode.dark || 
-                              (trenutniMode == ThemeMode.system && MediaQuery.platformBrightnessOf(context) == Brightness.dark);
-                          
+                          final bool isDark =
+                              trenutniMode == ThemeMode.dark ||
+                              (trenutniMode == ThemeMode.system &&
+                                  MediaQuery.platformBrightnessOf(context) ==
+                                      Brightness.dark);
+
                           return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
                             child: Row(
                               children: [
                                 Icon(
-                                  isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded, 
-                                  color: boje.A, 
+                                  isDark
+                                      ? Icons.dark_mode_rounded
+                                      : Icons.light_mode_rounded,
+                                  color: boje.A,
                                   size: 24,
                                 ),
                                 const SizedBox(width: 20),
                                 Expanded(
                                   child: Text(
-                                    isDark ? "Tamni način rada" : "Svijetli način rada",
+                                    isDark
+                                        ? "Tamni način rada"
+                                        : "Svijetli način rada",
                                     style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -181,11 +235,15 @@ class PostavkeEkran extends StatelessWidget {
                                 Switch(
                                   value: isDark,
                                   activeColor: boje.A,
-                                  activeTrackColor: boje.A?.withValues(alpha: 0.4),
+                                  activeTrackColor: boje.A?.withValues(
+                                    alpha: 0.4,
+                                  ),
                                   inactiveThumbColor: boje.A,
                                   inactiveTrackColor: boje.bg,
                                   onChanged: (val) {
-                                    themeNotifier.value = val ? ThemeMode.dark : ThemeMode.light;
+                                    themeNotifier.value = val
+                                        ? ThemeMode.dark
+                                        : ThemeMode.light;
                                   },
                                 ),
                               ],
@@ -193,15 +251,30 @@ class PostavkeEkran extends StatelessWidget {
                           );
                         },
                       ),
-                      _PostavkaItem(ikona: Icons.grid_view_rounded, naslov: "Broj oglasa po stranici", boje: boje, onTap: () {}),
-                      _PostavkaItem(ikona: Icons.format_size_rounded, naslov: "Veličina fonta", boje: boje, onTap: () {}),
-                      _PostavkaItem(ikona: Icons.contrast_rounded, naslov: "Visok kontrast", boje: boje, onTap: () {}),
                       _PostavkaItem(
-                        ikona: Icons.check_box_outlined, 
-                        naslov: "Prihvaćene postavke", 
+                        ikona: Icons.grid_view_rounded,
+                        naslov: "Broj oglasa po stranici",
                         boje: boje,
-                        onTap: () {}, 
-                        isZadnji: true
+                        onTap: () {},
+                      ),
+                      _PostavkaItem(
+                        ikona: Icons.format_size_rounded,
+                        naslov: "Veličina fonta",
+                        boje: boje,
+                        onTap: () {},
+                      ),
+                      _PostavkaItem(
+                        ikona: Icons.contrast_rounded,
+                        naslov: "Visok kontrast",
+                        boje: boje,
+                        onTap: () {},
+                      ),
+                      _PostavkaItem(
+                        ikona: Icons.check_box_outlined,
+                        naslov: "Prihvaćene postavke",
+                        boje: boje,
+                        onTap: () {},
+                        isZadnji: true,
                       ),
                     ], boje),
                   ],
@@ -227,7 +300,11 @@ class PostavkeEkran extends StatelessWidget {
             child: Text(
               "Postavke",
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: boje.A),
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: boje.A,
+              ),
             ),
           ),
           const SizedBox(width: 40),
@@ -289,7 +366,10 @@ class _PostavkaItem extends StatelessWidget {
                     ),
                   ),
                 ),
-                Icon(Icons.chevron_right, color: boje.A?.withValues(alpha: 0.4)),
+                Icon(
+                  Icons.chevron_right,
+                  color: boje.A?.withValues(alpha: 0.4),
+                ),
               ],
             ),
           ),

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../dekor.dart'; // Uvoz centraliziranih boja i teme
-
-// DEFINICIJA SUPABASE KLIJENTA
-final supabase = Supabase.instance.client;
+import '../services/auth_service.dart';
+import '../dekor.dart';
 
 class login extends StatefulWidget {
   const login({super.key});
@@ -13,12 +11,13 @@ class login extends StatefulWidget {
 }
 
 class _LoginState extends State<login> {
+  final AuthService _authService = AuthService();
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _passwordObscured = true;
 
-  // Funkcija za login na Supabase
   Future<void> _signIn() async {
     if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -30,39 +29,40 @@ class _LoginState extends State<login> {
     setState(() => _isLoading = true);
 
     try {
-      await supabase.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      // 1. Prijava korisnika
+      await _authService.prijavaKorisnika(
+        email: _emailController.text,
+        password: _passwordController.text,
       );
 
+      // 2. Dohvaćamo ulogu iz Supabase user metadata
+      final user = Supabase.instance.client.auth.currentUser;
+      final String uloga = user?.userMetadata?['uloga'] ?? 'kandidat';
+
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/ekrani/glavni_ekran');
+        // 3. Dinamičko usmjeravanje ovisno o ulozi
+        if (uloga == 'poslodavac') {
+          Navigator.pushReplacementNamed(context, '/ekrani/jednostavni_ekran');
+        } else {
+          Navigator.pushReplacementNamed(context, '/ekrani/glavni_ekran');
+        }
       }
     } on AuthApiException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error.message), 
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(error.message), backgroundColor: Colors.red),
         );
       }
     } on AuthException catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error.message), 
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(error.message), backgroundColor: Colors.red),
         );
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error.toString()),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(error.toString()), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -79,20 +79,18 @@ class _LoginState extends State<login> {
 
   @override
   Widget build(BuildContext context) {
-    // Dohvaćamo definirane boje iz dekor.dart
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
 
     return Scaffold(
       backgroundColor: boje.bg,
       body: PozadinaKrugovi(
-        krugBoja: boje.C, // Koristi globalni sustav krugova
+        krugBoja: boje.C,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Gumb natrag
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Container(
@@ -110,7 +108,6 @@ class _LoginState extends State<login> {
 
                 const Spacer(flex: 1),
 
-                // NASLOV
                 Text(
                   'Dobrodošli natrag',
                   textAlign: TextAlign.center,
@@ -129,7 +126,6 @@ class _LoginState extends State<login> {
 
                 const SizedBox(height: 48),
 
-                // INPUT POLJA
                 _buildInputField(
                   _emailController,
                   'E-mail adresa',
@@ -148,7 +144,6 @@ class _LoginState extends State<login> {
 
                 const SizedBox(height: 12),
 
-                // Zaboravljena lozinka
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -162,7 +157,6 @@ class _LoginState extends State<login> {
 
                 const SizedBox(height: 32),
 
-                // GUMB ZA PRIJAVU
                 _isLoading
                     ? Center(
                         child: CircularProgressIndicator(
@@ -191,7 +185,6 @@ class _LoginState extends State<login> {
 
                 const Spacer(flex: 2),
 
-                // Link na registraciju
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

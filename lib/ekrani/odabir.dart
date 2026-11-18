@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../dekor.dart'; // Uvoz centraliziranih boja i teme
 
 class odabir extends StatelessWidget {
@@ -7,13 +8,17 @@ class odabir extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Dohvaćamo definirane boje iz dekor.dart
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
+    
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final String trazimRadnikaSvg = isDarkMode ? 'assets/images/trazimradnika_darkmode.svg' : 'assets/images/trazimradnika_lightmode.svg';
+    final String trazimPosaoSvg = isDarkMode ? 'assets/images/trazimposao_darkmode.svg' : 'assets/images/trazimposao_lightmode.svg';
+    final String upitnikSvg = isDarkMode ? 'assets/images/upitnik_darkmode.svg' : 'assets/images/upitnik_lightmode.svg';
 
     return Scaffold(
       backgroundColor: boje.bg,
       body: PozadinaKrugovi(
-        krugBoja: boje.C, // Koristi globalni sustav krugova
+        krugBoja: boje.C,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -36,7 +41,6 @@ class odabir extends StatelessWidget {
 
                 const SizedBox(height: 60),
 
-                // NASLOV
                 Text(
                   'Dobrodošli!',
                   style: TextStyle(
@@ -59,40 +63,53 @@ class odabir extends StatelessWidget {
 
                 const SizedBox(height: 60),
 
-                // KARTICE ZA ODABIR
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     _buildRoleCard(
                       context,
                       title: 'Tražim radnika',
-                      svgPath: 'assets/images/trazim_radnika.svg',
+                      svgPath: trazimRadnikaSvg,
                       boje: boje,
-                      onTap: () {
-                        Navigator.pushNamed(context, '/ekrani/jednostavni_ekran');
+                      onTap: () async {
+                        // Spremamo ulogu u Supabase user metadata
+                        final user = Supabase.instance.client.auth.currentUser;
+                        if (user != null) {
+                          await Supabase.instance.client.auth.updateUser(
+                            UserAttributes(data: {'uloga': 'poslodavac'}),
+                          );
+                        }
+                        if (context.mounted) {
+                          Navigator.pushNamed(context, '/ekrani/jednostavni_ekran');
+                        }
                       },
                     ),
                     _buildRoleCard(
                       context,
                       title: 'Tražim posao',
-                      svgPath: 'assets/images/trazim_posao.svg',
+                      svgPath: trazimPosaoSvg,
                       boje: boje,
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/ekrani/glavni_ekran',
-                        );
+                      onTap: () async {
+                        // Spremamo ulogu u Supabase user metadata
+                        final user = Supabase.instance.client.auth.currentUser;
+                        if (user != null) {
+                          await Supabase.instance.client.auth.updateUser(
+                            UserAttributes(data: {'uloga': 'kandidat'}),
+                          );
+                        }
+                        if (context.mounted) {
+                          Navigator.pushNamed(context, '/ekrani/glavni_ekran');
+                        }
                       },
                     ),
                   ],
                 ),
                 const Spacer(),
 
-                // DONJA ILUSTRACIJA
                 Padding(
                   padding: const EdgeInsets.only(bottom: 20.0),
                   child: SvgPicture.asset(
-                    'assets/images/upitnik.svg', 
+                    upitnikSvg, 
                     height: 180,
                     placeholderBuilder: (context) => SizedBox(
                       height: 180,
@@ -114,7 +131,6 @@ class odabir extends StatelessWidget {
     );
   }
 
-  // Funkcija za izgradnju pojedinačne kartice 
   Widget _buildRoleCard(
     BuildContext context, {
     required String title,
@@ -131,9 +147,9 @@ class odabir extends StatelessWidget {
             height: 140,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-            color: boje.C?.withValues(alpha: 0.3),  
+              color: boje.C?.withValues(alpha: 0.3),  
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: boje.B!, width: 2), // Rub koristi boju B
+              border: Border.all(color: boje.B!, width: 2),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.15),

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart'; // Ključno za klik na tekst
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'opciUvjeti.dart'; // Provjeri putanju do ekrana s uvjetima
-import '../dekor.dart'; // Uvoz centraliziranih boja i teme
-
-// DEFINICIJA SUPABASE KLIJENTA
-final supabase = Supabase.instance.client;
+import 'package:flutter/gestures.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
+import '../services/auth_service.dart';
+import 'opciUvjeti.dart';
+import '../dekor.dart';
 
 class RegistracijaEkran extends StatefulWidget {
   const RegistracijaEkran({super.key});
@@ -15,6 +13,8 @@ class RegistracijaEkran extends StatefulWidget {
 }
 
 class _RegistracijaEkranState extends State<RegistracijaEkran> {
+  final AuthService _authService = AuthService();
+
   final _imeController = TextEditingController();
   final _emailController = TextEditingController();
   final _telefonController = TextEditingController();
@@ -22,6 +22,7 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
 
   bool _prihvacamUvjete = false;
   bool _isLoading = false;
+  bool _sakrijLozinku = true;
 
   Future<void> _signUp() async {
     if (_imeController.text.isEmpty ||
@@ -43,13 +44,11 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
     setState(() => _isLoading = true);
 
     try {
-      await supabase.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _lozinkaController.text.trim(),
-        data: {
-          'puno_ime': _imeController.text.trim(),
-          'telefon': _telefonController.text.trim(),
-        },
+      await _authService.registrirajKorisnika(
+        email: _emailController.text,
+        password: _lozinkaController.text,
+        punoIme: _imeController.text,
+        telefon: _telefonController.text,
       );
 
       if (mounted) {
@@ -92,7 +91,6 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
 
   @override
   Widget build(BuildContext context) {
-    // Dohvaćamo definirane boje iz dekor.dart
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
 
     return Scaffold(
@@ -106,7 +104,6 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Back gumb
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Container(
@@ -121,7 +118,6 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
                       ),
                     ),
                   ),
-
                   Text(
                     'Registracija',
                     textAlign: TextAlign.center,
@@ -138,9 +134,7 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
                     textAlign: TextAlign.center,
                     style: TextStyle(fontSize: 16, color: boje.A),
                   ),
-
                   const SizedBox(height: 40),
-
                   _buildInputField(
                     _imeController,
                     'Ime i prezime',
@@ -171,16 +165,11 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
                     boje,
                     isPassword: true,
                   ),
-
                   const SizedBox(height: 24),
-
-                  // CHECKBOX S LINKOM NA UVJETE
                   _buildCheckbox('', _prihvacamUvjete, (value) {
                     setState(() => _prihvacamUvjete = value!);
                   }, boje, isLegal: true),
-
                   const SizedBox(height: 40),
-
                   _isLoading
                       ? Center(
                           child: CircularProgressIndicator(
@@ -193,16 +182,13 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
                           boje.bg!,
                           _signUp,
                         ),
-
                   const SizedBox(height: 16),
-
                   _buildMainButton(
                     'Log in',
                     boje.B!,
                     boje.A!,
                     () => Navigator.pushNamed(context, '/ekrani/login'),
                   ),
-
                   const SizedBox(height: 24),
                   Text(
                     'Već imate profil?',
@@ -239,7 +225,7 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
       ),
       child: TextField(
         controller: controller,
-        obscureText: isPassword,
+        obscureText: isPassword ? _sakrijLozinku : false,
         keyboardType: isEmail
             ? TextInputType.emailAddress
             : (isPhone ? TextInputType.phone : TextInputType.text),
@@ -251,6 +237,19 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
             fontSize: 16,
           ),
           prefixIcon: Icon(icon, color: boje.A?.withValues(alpha: 1.0)),
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(
+                    _sakrijLozinku ? Icons.visibility_off : Icons.visibility,
+                    color: boje.A?.withValues(alpha: 0.75),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _sakrijLozinku = !_sakrijLozinku;
+                    });
+                  },
+                )
+              : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 24,
@@ -261,7 +260,6 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
     );
   }
 
-  // MODIFICIRANI CHECKBOX S PODRŠKOM ZA KLIKABILNI TEKST UVJETA
   Widget _buildCheckbox(
     String title,
     bool value,
@@ -274,20 +272,20 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
       child: Row(
         children: [
           Theme(
-          data: ThemeData(
-            unselectedWidgetColor: boje.A, // Boja okvira kada NIJE označen
+            data: ThemeData(
+              unselectedWidgetColor: boje.A,
+            ),
+            child: Checkbox(
+              value: value,
+              onChanged: onChanged,
+              activeColor: boje.A,
+              checkColor: boje.bg,
+              side: BorderSide(
+                color: boje.A!,
+                width: 2.0,
+              ),
+            ),
           ),
-          child: Checkbox(
-            value: value,
-            onChanged: onChanged,
-            activeColor: boje.A,
-            checkColor: boje.bg,
-            side: BorderSide(
-              color: boje.A!,         // Precizna definicija ruba kućice
-              width: 2.0,
-          ),
-          ),
-        ),
           Expanded(
             child: isLegal
                 ? RichText(

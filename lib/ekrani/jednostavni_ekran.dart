@@ -66,7 +66,7 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
                           ),
                           _buildVelikaTipka(
                             context,
-                            ikona: Icons.person_rounded,
+                            ikona: Icons.account_box,
                             naslov: "Moj profil",
                             boje: boje,
                             onTap: () => Navigator.pushNamed(context, '/ekrani/korisnicki_profil'),

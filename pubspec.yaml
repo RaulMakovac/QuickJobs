@@ -28,6 +28,7 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  shared_preferences: ^2.2.3
   flutter:
     sdk: flutter
 
@@ -42,6 +43,8 @@ dependencies:
   
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
     # <--- OVO MORA BITI OVDJE
   # The "flutter_lints" package below contains a set of recommended lints to
@@ -59,8 +62,8 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/
     - .env
+    - assets/images/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

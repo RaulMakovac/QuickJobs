@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:quickjobs/ekrani/azuriraj_oglas.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '/ekrani/glavni_ekran.dart';
+import '../services/oglas_service.dart';
 import 'zaposli.dart';
 import '../dekor.dart'; 
 
@@ -13,33 +12,10 @@ class MojiOglasi extends StatefulWidget {
 }
 
 class _MojiOglasiState extends State<MojiOglasi> {
-  final supabase = Supabase.instance.client;
+  final OglasService _oglasService = OglasService();
 
-  Future<List<Oglas>> dohvatiMojeOglase() async {
-    final user = supabase.auth.currentUser;
-    if (user == null) return [];
-
-    try {
-      final response = await supabase
-          .from('oglasi')
-          .select('*, autor:profiles!oglasi_autor_id_fkey(puno_ime), obavljac:profiles!oglasi_obavljac_id_fkey(puno_ime)')
-          .eq('autor_id', user.id)
-          .order('created_at', ascending: false);
-
-      final List data = response as List;
-      List<Oglas> sviOglasi = data.map((json) => Oglas.fromJson(json)).toList();
-
-      sviOglasi.sort((a, b) {
-        if (a.status == 'obavljen' && b.status != 'obavljen') return 1;
-        if (a.status != 'obavljen' && b.status == 'obavljen') return -1;
-        return 0;
-      });
-
-      return sviOglasi;
-    } catch (e) {
-      debugPrint("QuickJobs Greška pri dohvaćanju: $e");
-      return [];
-    }
+  Future<List<Oglas>> _dohvatiMojeOglase() {
+    return _oglasService.dohvatiMojeOglase();
   }
 
   void _pokaziDijalogZaOcjenu(Oglas oglas, QuickJobsColors boje) {
@@ -93,9 +69,18 @@ class _MojiOglasiState extends State<MojiOglasi> {
             TextButton(onPressed: () => Navigator.pop(context), child: Text("Odustani", style: TextStyle(color: boje.A))),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: boje.A),
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                _spremiRecenzijuIZavrsi(oglas: oglas, ocjena: odabranaOcjena, komentar: komentarController.text);
+                try {
+                  await _oglasService.spremiRecenzijuIZavrsi(
+                    oglas: oglas,
+                    ocjena: odabranaOcjena,
+                    komentar: komentarController.text,
+                  );
+                  if (mounted) setState(() {});
+                } catch (e) {
+                  debugPrint("Greška pri završavanju: $e");
+                }
               },
               child: Text("Spremi i završi", style: TextStyle(color: boje.bg)),
             ),
@@ -107,17 +92,7 @@ class _MojiOglasiState extends State<MojiOglasi> {
 
   Future<void> _reaktivirajOglas(String oglasId, String? stariObavljacId) async {
     try {
-      if (stariObavljacId != null) {
-        await supabase
-            .from('chat_sobe')
-            .update({'status': 'arhivirano'})
-            .eq('oglas_id', oglasId);
-      }
-
-      await supabase.from('oglasi').update({
-        'status_oglasa': 'otvoren',
-        'obavljac_id': null,
-      }).eq('id', oglasId);
+      await _oglasService.reaktivirajOglas(oglasId, stariObavljacId);
       
       if (mounted) {
         setState(() {});
@@ -153,33 +128,10 @@ class _MojiOglasiState extends State<MojiOglasi> {
     );
   }
 
-  Future<void> _spremiRecenzijuIZavrsi({required Oglas oglas, required int ocjena, String? komentar}) async {
-    try {
-      final user = supabase.auth.currentUser;
-      if (user == null || oglas.obavljacId == null) return;
-
-      await supabase.from('recenzije').insert({
-        'oglas_id': oglas.id,
-        'ocjenjivac_id': user.id,
-        'ocijenjeni_id': oglas.obavljacId,
-        'uloga_ocijenjenog': 'obavljač',
-        'ocjena': ocjena,
-        'komentar': komentar,
-      });
-
-      await supabase.from('oglasi').update({'status_oglasa': 'obavljen'}).eq('id', oglas.id);
-      await supabase.from('chat_sobe').update({'status': 'arhivirano'}).eq('oglas_id', oglas.id);
-
-      if (mounted) setState(() {});
-    } catch (e) {
-      debugPrint("Greška pri završavanju: $e");
-    }
-  }
-
   Future<void> _trajnoObrisiOglas(String id) async {
     try {
-      await supabase.from('oglasi').delete().eq('id', id);
-      setState(() {}); 
+      await _oglasService.trajnoObrisiOglas(id);
+      if (mounted) setState(() {}); 
     } catch (e) {
       debugPrint("Greška pri trajnom brisanju oglasa: $e");
     }
@@ -220,7 +172,7 @@ class _MojiOglasiState extends State<MojiOglasi> {
               _buildHeader(boje),
               Expanded(
                 child: FutureBuilder<List<Oglas>>(
-                  future: dohvatiMojeOglase(),
+                  future: _dohvatiMojeOglase(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return Center(child: CircularProgressIndicator(color: boje.A));
