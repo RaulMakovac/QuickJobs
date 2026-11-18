@@ -28,8 +28,9 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
 
   @override
   Widget build(BuildContext context) {
-    // Dohvaćamo definirane boje iz dekor.dart
+    // Dohvaćamo definirane boje i provjeravamo aktivni mod teme
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: boje.bg,
@@ -41,7 +42,7 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
             child: Column(
               children: [
                 const SizedBox(height: 30),
-                _buildLogo(boje.A!),
+                _buildLogo(boje.A!, isDark),
                 
                 // SREDIŠNJI DIO - Sve je centrirano i nema skrolanja
                 Expanded(
@@ -103,11 +104,13 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
     );
   }
 
-  Widget _buildLogo(Color boja) {
+  Widget _buildLogo(Color boja, bool isDark) {
     return Column(
       children: [
         SvgPicture.asset(
-          'assets/images/QJ_Logo.svg', 
+          isDark 
+              ? 'assets/images/logo_darkmode.svg' 
+              : 'assets/images/logo_lightmode.svg', 
           width: 100,             
           height: 100,
         ),
@@ -133,7 +136,7 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
   }) {
     return Card(
       elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.2),
+      shadowColor: Colors.black.withValues(alpha: 0.2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       color: boje.C, // Kartice koriste boju C
       child: InkWell(
@@ -158,7 +161,7 @@ class _JednostavniIzbornikState extends State<JednostavniIzbornik> {
   Widget _buildGlavniDodajOglasGumb(BuildContext context, QuickJobsColors boje) {
     return Card(
       elevation: 4,
-      shadowColor: boje.A?.withOpacity(0.4),
+      shadowColor: boje.A?.withValues(alpha: 0.4),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       color: boje.A, // Glavni gumb koristi boju A
       child: InkWell(

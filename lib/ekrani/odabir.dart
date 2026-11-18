@@ -131,9 +131,9 @@ class odabir extends StatelessWidget {
             height: 140,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: boje.B, // Kartica koristi boju C
+            color: boje.C?.withValues(alpha: 0.3),  
               borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: boje.B!, width: 3), // Rub koristi boju B
+              border: Border.all(color: boje.B!, width: 2), // Rub koristi boju B
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.15),
@@ -152,7 +152,7 @@ class odabir extends StatelessWidget {
                   child: Icon(
                     Icons.person,
                     size: 40,
-                    color: boje.A,
+                    color: boje.B,
                   ),
                 ),
               ),

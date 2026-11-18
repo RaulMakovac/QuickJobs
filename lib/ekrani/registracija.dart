@@ -250,7 +250,7 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
             color: boje.A?.withValues(alpha: 0.65),
             fontSize: 16,
           ),
-          prefixIcon: Icon(icon, color: boje.A?.withValues(alpha: 0.75)),
+          prefixIcon: Icon(icon, color: boje.A?.withValues(alpha: 1.0)),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 24,

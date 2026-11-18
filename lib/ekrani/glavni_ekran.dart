@@ -155,8 +155,9 @@ class _glavni_ekranState extends State<glavni_ekran> {
 
   @override
   Widget build(BuildContext context) {
-    // Dohvaćamo definirane boje iz dekor.dart
+    // Dohvaćamo definirane boje i provjeravamo aktivni mod teme
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: boje.bg,
@@ -193,7 +194,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
                           ),
                           boje,
                         ),
-                        _buildCentralLogo(),
+                        _buildCentralLogo(isDark),
                         _buildHeaderIcon(
                           Icons.account_box,
                           () => Navigator.push(
@@ -298,9 +299,11 @@ class _glavni_ekranState extends State<glavni_ekran> {
     );
   }
 
-  Widget _buildCentralLogo() {
+  Widget _buildCentralLogo(bool isDark) {
     return SvgPicture.asset(
-      'assets/images/QJ_Logo.svg',
+      isDark 
+          ? 'assets/images/logo_darkmode.svg' 
+          : 'assets/images/logo_lightmode.svg',
       width: 75,
       height: 75,
       fit: BoxFit.contain,

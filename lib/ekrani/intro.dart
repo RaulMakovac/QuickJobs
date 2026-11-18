@@ -7,8 +7,9 @@ class intro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Dohvaćamo tvoju paletu boja
+    // 1. Dohvaćamo tvoju paletu boja i provjeravamo aktivni mod teme
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: boje.bg, // 1. boja za pozadinu ekrana
@@ -21,9 +22,11 @@ class intro extends StatelessWidget {
               children: [
                 const Spacer(flex: 2),
                 
-                // Ilustracija
+                // Ilustracija koja se mijenja ovisno o Light/Dark modu
                 SvgPicture.asset(
-                  'assets/images/intro.svg',
+                  isDark 
+                      ? 'assets/images/intro_darkmode.svg' 
+                      : 'assets/images/intro_lightmode.svg',
                   height: MediaQuery.of(context).size.height * 0.35,
                   fit: BoxFit.contain,
                 ),
