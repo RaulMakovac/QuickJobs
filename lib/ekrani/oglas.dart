@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:latlong2/latlong.dart';
 import '../services/oglas_service.dart';
 import '../services/prijava_service.dart';
 import '../services/report_service.dart';
@@ -21,6 +24,8 @@ class DetaljiOglasa extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
+    final bool imaLokaciju =
+        (oglas.lat != null && oglas.lng != null) || oglas.adresa.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: boje.bg,
@@ -36,10 +41,10 @@ class DetaljiOglasa extends StatelessWidget {
                 _buildAppBar(context, boje),
                 const SizedBox(height: 35),
                 _buildJobTitleHeader(boje),
-                
+
                 const SizedBox(height: 15),
                 _buildKategorijaBadge(boje),
-                
+
                 // UPOZORENJE ZAJEDNICE (REPORTS)
                 if (oglas.jeReportan) ...[
                   const SizedBox(height: 25),
@@ -96,7 +101,13 @@ class DetaljiOglasa extends StatelessWidget {
                 _buildAuthorSection(context, boje),
 
                 const SizedBox(height: 25),
-                _buildDetailRow('Adresa: ${oglas.adresa}', Icons.location_on_rounded, boje),
+                _buildDetailRow(
+                  'Adresa: ${oglas.adresa}',
+                  Icons.location_on_rounded,
+                  boje,
+                  trailingIcon: imaLokaciju ? Icons.map_rounded : null,
+                  onTap: imaLokaciju ? () => _otvoriKartuOglasa(context, boje) : null,
+                ),
                 const SizedBox(height: 12),
                 _buildDetailRow('Isplata: ${oglas.isplata}€', Icons.euro_rounded, boje),
 
@@ -127,6 +138,113 @@ class DetaljiOglasa extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _otvoriKartuOglasa(BuildContext context, QuickJobsColors boje) async {
+    LatLng? tocka;
+
+    if (oglas.lat != null && oglas.lng != null) {
+      tocka = LatLng(oglas.lat!, oglas.lng!);
+    } else if (oglas.adresa.trim().isNotEmpty) {
+      try {
+        final lokacije = await locationFromAddress(oglas.adresa.trim());
+        if (lokacije.isNotEmpty) {
+          tocka = LatLng(lokacije.first.latitude, lokacije.first.longitude);
+        }
+      } catch (e) {
+        debugPrint("Greška pri geokodiranju adrese: $e");
+      }
+    }
+
+    if (!context.mounted) return;
+
+    if (tocka == null) {
+      _showSnack(
+        context,
+        "Nije moguće prikazati lokaciju na karti za ovu adresu.",
+        isError: true,
+      );
+      return;
+    }
+
+    final LatLng prikazanaTocka = tocka;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: boje.bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+      ),
+      builder: (modalContext) {
+        return SizedBox(
+          height: MediaQuery.of(modalContext).size.height * 0.65,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.location_on_rounded, color: boje.A),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        oglas.adresa.isNotEmpty ? oglas.adresa : 'Lokacija posla',
+                        style: TextStyle(
+                          color: boje.A,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(modalContext),
+                      icon: Icon(Icons.close, color: boje.A),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: FlutterMap(
+                      options: MapOptions(
+                        initialCenter: prikazanaTocka,
+                        initialZoom: 15.5,
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.quickjobs.app',
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: prikazanaTocka,
+                              width: 50,
+                              height: 50,
+                              child: const Icon(
+                                Icons.location_pin,
+                                color: Colors.redAccent,
+                                size: 44,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -375,15 +493,21 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String text, IconData icon, QuickJobsColors boje) {
-    return Container(
+  Widget _buildDetailRow(
+    String text,
+    IconData icon,
+    QuickJobsColors boje, {
+    IconData? trailingIcon,
+    VoidCallback? onTap,
+  }) {
+    final rowContent = Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
         color: boje.C,
         borderRadius: BorderRadius.circular(15),
       ),
-      child: Row( 
+      child: Row(
         children: [
           Icon(icon, color: boje.A, size: 20),
           const SizedBox(width: 15),
@@ -397,8 +521,19 @@ class DetaljiOglasa extends StatelessWidget {
               ),
             ),
           ),
+          if (trailingIcon != null) ...[
+            const SizedBox(width: 10),
+            Icon(trailingIcon, color: boje.A, size: 20),
+          ],
         ],
       ),
+    );
+
+    if (onTap == null) return rowContent;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: rowContent,
     );
   }
 

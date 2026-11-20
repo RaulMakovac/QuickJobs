@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:latlong2/latlong.dart';
 import '../services/oglas_service.dart';
 import '../dekor.dart';
 
@@ -18,6 +21,8 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
   final _opisController = TextEditingController();
 
   String _odabranaKategorija = "Ostalo";
+  double? _odabraniLat;
+  double? _odabraniLng;
   bool _isLoading = false;
 
   @override
@@ -27,6 +32,40 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
     _isplataController.dispose();
     _opisController.dispose();
     super.dispose();
+  }
+
+  Future<void> _otvoriKartuZaLokaciju() async {
+    final pocetna = (_odabraniLat != null && _odabraniLng != null)
+        ? LatLng(_odabraniLat!, _odabraniLng!)
+        : null;
+
+    final rezultat = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _OdabirLokacijeEkran(
+          pocetnaLokacija: pocetna,
+          pocetnaAdresa: _adresaController.text.trim(),
+        ),
+      ),
+    );
+
+    if (rezultat != null && mounted) {
+      final LatLng? tocka = rezultat['point'] as LatLng?;
+      final String? predlozenaAdresa = rezultat['adresa'] as String?;
+
+      setState(() {
+        if (tocka != null) {
+          _odabraniLat = tocka.latitude;
+          _odabraniLng = tocka.longitude;
+        }
+        // Ne prepisujemo ručno unesenu adresu ako već postoji tekst
+        if (_adresaController.text.trim().isEmpty &&
+            predlozenaAdresa != null &&
+            predlozenaAdresa.trim().isNotEmpty) {
+          _adresaController.text = predlozenaAdresa;
+        }
+      });
+    }
   }
 
   Future<void> _objaviOglas() async {
@@ -54,6 +93,8 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
         isplata: isplata,
         opis: opis,
         kategorija: _odabranaKategorija,
+        lat: _odabraniLat,
+        lng: _odabraniLng,
       );
 
       if (mounted) {
@@ -113,7 +154,7 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 40), 
+                    const SizedBox(width: 40),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -150,8 +191,43 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                   ],
                 ),
                 const SizedBox(height: 15),
-                _customField("Adresa:", _adresaController, boje),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: _customField("Adresa:", _adresaController, boje),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: boje.C,
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(color: boje.A!.withValues(alpha: 0.3), width: 1),
+                      ),
+                      child: IconButton(
+                        onPressed: _otvoriKartuZaLokaciju,
+                        icon: Icon(Icons.map_rounded, color: boje.A),
+                        tooltip: 'Odaberi točnu lokaciju na karti',
+                      ),
+                    ),
+                  ],
+                ),
+                if (_odabraniLat != null && _odabraniLng != null) ...[
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Odabrana točka: ${_odabraniLat!.toStringAsFixed(5)}, ${_odabraniLng!.toStringAsFixed(5)}',
+                      style: TextStyle(
+                        color: boje.A?.withValues(alpha: 0.75),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 15),
+
                 _customField("Isplata:", _isplataController, boje, isNumber: true),
                 const SizedBox(height: 15),
 
@@ -196,7 +272,7 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                     value: _odabranaKategorija,
                     dropdownColor: boje.C,
                     style: TextStyle(
-                      color: boje.A, 
+                      color: boje.A,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -216,12 +292,12 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                           children: [
                             Icon(
                               kategorijeSaIkonama[kategorija],
-                              color: boje.A, 
+                              color: boje.A,
                               size: 22,
                             ),
                             const SizedBox(width: 12),
                             Text(
-                              kategorija, 
+                              kategorija,
                               style: TextStyle(
                                 color: boje.A,
                                 fontWeight: FontWeight.w600,
@@ -307,6 +383,168 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
           ),
           border: InputBorder.none,
         ),
+      ),
+    );
+  }
+}
+
+class _OdabirLokacijeEkran extends StatefulWidget {
+  final LatLng? pocetnaLokacija;
+  final String? pocetnaAdresa;
+
+  const _OdabirLokacijeEkran({
+    this.pocetnaLokacija,
+    this.pocetnaAdresa,
+  });
+
+  @override
+  State<_OdabirLokacijeEkran> createState() => _OdabirLokacijeEkranState();
+}
+
+class _OdabirLokacijeEkranState extends State<_OdabirLokacijeEkran> {
+  final MapController _mapController = MapController();
+  late LatLng _trenutnaTocka;
+  String? _predlozenaAdresa;
+  bool _trazimAdresu = false;
+
+  static const LatLng _defaultCentar = LatLng(45.3271, 14.4422);
+
+  @override
+  void initState() {
+    super.initState();
+    _trenutnaTocka = widget.pocetnaLokacija ?? _defaultCentar;
+    if (widget.pocetnaLokacija == null &&
+        widget.pocetnaAdresa != null &&
+        widget.pocetnaAdresa!.trim().isNotEmpty) {
+      _pokusajPronaciAdresu(widget.pocetnaAdresa!.trim());
+    }
+  }
+
+  Future<void> _pokusajPronaciAdresu(String adresa) async {
+    try {
+      final lokacije = await locationFromAddress(adresa);
+      if (lokacije.isNotEmpty && mounted) {
+        final nova = LatLng(lokacije.first.latitude, lokacije.first.longitude);
+        setState(() => _trenutnaTocka = nova);
+        _mapController.move(nova, 15);
+      }
+    } catch (_) {
+      // Ako geocoding ne pronađe adresu, ostajemo na početnoj točki
+    }
+  }
+
+  Future<void> _osvjeziAdresuZaTocku(LatLng tocka) async {
+    setState(() => _trazimAdresu = true);
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        tocka.latitude,
+        tocka.longitude,
+      );
+      if (placemarks.isNotEmpty && mounted) {
+        final p = placemarks.first;
+        final dijelovi = [
+          p.street,
+          p.postalCode,
+          p.locality,
+        ].where((e) => e != null && e.trim().isNotEmpty).cast<String>().toList();
+
+        if (dijelovi.isNotEmpty) {
+          setState(() => _predlozenaAdresa = dijelovi.join(', '));
+        }
+      }
+    } catch (_) {
+      // Ne diramo postojeću adresu ako reverse geocoding ne uspije
+    } finally {
+      if (mounted) setState(() => _trazimAdresu = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final boje = Theme.of(context).extension<QuickJobsColors>()!;
+
+    return Scaffold(
+      backgroundColor: boje.bg,
+      appBar: AppBar(
+        backgroundColor: boje.bg,
+        foregroundColor: boje.A,
+        title: const Text('Odaberi točnu lokaciju'),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _trenutnaTocka,
+                initialZoom: 14,
+                onTap: (tapPosition, point) {
+                  setState(() => _trenutnaTocka = point);
+                  _osvjeziAdresuZaTocku(point);
+                },
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.quickjobs',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _trenutnaTocka,
+                      width: 48,
+                      height: 48,
+                      child: const Icon(
+                        Icons.location_pin,
+                        size: 46,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: boje.C,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  _trazimAdresu
+                      ? 'Tražim adresu za odabranu točku...'
+                      : (_predlozenaAdresa ??
+                          'Dodirnite kartu za postavljanje točne točke.'),
+                  style: TextStyle(color: boje.A, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Lat: ${_trenutnaTocka.latitude.toStringAsFixed(5)}, '
+                  'Lng: ${_trenutnaTocka.longitude.toStringAsFixed(5)}',
+                  style: TextStyle(
+                    color: boje.A?.withValues(alpha: 0.7),
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: boje.A,
+                    foregroundColor: boje.bg,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context, {
+                      'point': _trenutnaTocka,
+                      'adresa': _predlozenaAdresa,
+                    });
+                  },
+                  child: const Text('Potvrdi lokaciju'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

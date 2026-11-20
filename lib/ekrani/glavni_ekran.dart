@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:quickjobs/ekrani/oglas.dart';
 import '/services/oglas_service.dart';
 import 'korisnicki_profil.dart';
@@ -24,9 +26,19 @@ class _glavni_ekranState extends State<glavni_ekran> {
   String? _odabranaKategorija;
   bool _prikaziFiltere = false;
 
+  // Filter udaljenosti (null = isključeno)
+  double? _maxUdaljenostKm;
+  // Stvarna lokacija korisnika (popunjava se preko Geolocator paketa)
+  double? _korisnikLat;
+  double? _korisnikLng;
+
+  late Future<List<Oglas>> _oglasiFuture;
+
   @override
   void initState() {
     super.initState();
+    _oglasiFuture = _dohvatiOglase();
+    _dohvatiLokacijuKorisnika();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final banPoruka = await AuthProvjera.ProvjeriBanKorisnika();
       if (banPoruka != null && mounted) {
@@ -41,7 +53,60 @@ class _glavni_ekranState extends State<glavni_ekran> {
     super.dispose();
   }
 
+Future<void> _dohvatiLokacijuKorisnika() async {
+    try {
+      final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      debugPrint('GPS serviceEnabled: $serviceEnabled');
+      if (!serviceEnabled) return;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      debugPrint('GPS permission prije: $permission');
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        debugPrint('GPS permission nakon zahtjeva: $permission');
+        if (permission == LocationPermission.denied) return;
+      }
+
+      if (permission == LocationPermission.deniedForever) return;
+
+      final Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+        ),
+      );
+      debugPrint('GPS pozicija: ${position.latitude}, ${position.longitude}');
+
+      if (!mounted) return;
+      setState(() {
+        _korisnikLat = position.latitude;
+        _korisnikLng = position.longitude;
+        _oglasiFuture = _dohvatiOglase();
+      });
+    } catch (e) {
+      debugPrint("Greška pri dohvatu GPS lokacije: $e");
+    }
+  }
+
+  void _osvjeziOglase() {
+    setState(() {
+      _oglasiFuture = _dohvatiOglase();
+    });
+  }
+
   Future<List<Oglas>> _dohvatiOglase() {
+    if (_maxUdaljenostKm != null &&
+        _korisnikLat != null &&
+        _korisnikLng != null) {
+      return _oglasService.dohvatiOglaseUNutarRadijusa(
+        lat: _korisnikLat!,
+        lng: _korisnikLng!,
+        radijusKm: _maxUdaljenostKm!,
+        searchQuery: _searchQuery,
+        minIsplata: _minIsplata,
+        odabranaKategorija: _odabranaKategorija,
+      );
+    }
+
     return _oglasService.dohvatiDostupneOglase(
       searchQuery: _searchQuery,
       minIsplata: _minIsplata,
@@ -111,7 +176,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _StickySearchDelegate(
-                  visina: _prikaziFiltere ? 265 : 80,
+                  visina: _prikaziFiltere ? 335 : 80,
                   bgColor: boje.bg!.withValues(alpha: 0.0),
                   child: Container(
                     decoration: BoxDecoration(
@@ -136,7 +201,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
               SliverPadding(
                 padding: const EdgeInsets.only(top: 5, bottom: 20),
                 sliver: FutureBuilder<List<Oglas>>(
-                  future: _dohvatiOglase(),
+                  future: _oglasiFuture,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return SliverToBoxAdapter(
@@ -214,7 +279,10 @@ class _glavni_ekranState extends State<glavni_ekran> {
       ),
       child: TextField(
         controller: _searchController,
-        onChanged: (value) => setState(() => _searchQuery = value),
+        onChanged: (value) {
+          _searchQuery = value;
+          _osvjeziOglase();
+        },
         style: TextStyle(color: boje.A),
         decoration: InputDecoration(
           icon: Icon(Icons.search, color: boje.A?.withValues(alpha: 0.7)),
@@ -242,7 +310,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
-      height: _prikaziFiltere ? 170 : 0,
+      height: _prikaziFiltere ? 240 : 0,
       margin: EdgeInsets.only(top: _prikaziFiltere ? 10 : 0),
       padding: EdgeInsets.all(_prikaziFiltere ? 15 : 0),
       clipBehavior: Clip.none,
@@ -250,11 +318,12 @@ class _glavni_ekranState extends State<glavni_ekran> {
         duration: const Duration(milliseconds: 300),
         opacity: _prikaziFiltere ? 1.0 : 0.0,
         child: OverflowBox(
-          maxHeight: 170,
+          maxHeight: 240,
           alignment: Alignment.topCenter,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Min. isplata + Reset
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -265,12 +334,33 @@ class _glavni_ekranState extends State<glavni_ekran> {
                       color: boje.A,
                     ),
                   ),
-                  Text(
-                    "${_minIsplata.toInt()}€",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: boje.A,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        "${_minIsplata.toInt()}€",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: boje.A,
+                        ),
+                      ),
+                      if (_minIsplata > 0) ...[
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            _minIsplata = 0;
+                            _osvjeziOglase();
+                          },
+                          child: Text(
+                            "Reset",
+                            style: TextStyle(
+                              fontSize: 12,
+                              decoration: TextDecoration.underline,
+                              color: boje.A?.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
@@ -282,7 +372,71 @@ class _glavni_ekranState extends State<glavni_ekran> {
                 activeColor: boje.A,
                 inactiveColor: boje.B?.withValues(alpha: 0.3),
                 onChanged: (value) => setState(() => _minIsplata = value),
+                onChangeEnd: (value) {
+                  _minIsplata = value;
+                  _osvjeziOglase();
+                },
               ),
+
+              // Filter udaljenosti (km) + Reset
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Maks. udaljenost",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: boje.A,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        _maxUdaljenostKm == null
+                            ? "Sve"
+                            : "${_maxUdaljenostKm!.toInt()} km",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: boje.A,
+                        ),
+                      ),
+                      if (_maxUdaljenostKm != null) ...[
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            _maxUdaljenostKm = null;
+                            _osvjeziOglase();
+                          },
+                          child: Text(
+                            "Reset",
+                            style: TextStyle(
+                              fontSize: 12,
+                              decoration: TextDecoration.underline,
+                              color: boje.A?.withValues(alpha: 0.8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+              Slider(
+                value: _maxUdaljenostKm ?? 0,
+                min: 0,
+                max: 100,
+                divisions: 20,
+                activeColor: boje.A,
+                inactiveColor: boje.B?.withValues(alpha: 0.3),
+                onChanged: (value) => setState(() {
+                  _maxUdaljenostKm = value == 0 ? null : value;
+                }),
+                onChangeEnd: (value) {
+                  _maxUdaljenostKm = value == 0 ? null : value;
+                  _osvjeziOglase();
+                },
+              ),
+
               const SizedBox(height: 5),
               Text(
                 "Kategorija posla",
@@ -326,9 +480,8 @@ class _glavni_ekranState extends State<glavni_ekran> {
                   );
                 }).toList(),
                 onChanged: (novoStanje) {
-                  setState(() {
-                    _odabranaKategorija = novoStanje;
-                  });
+                  _odabranaKategorija = novoStanje;
+                  _osvjeziOglase();
                 },
               ),
             ],
@@ -342,13 +495,32 @@ class _glavni_ekranState extends State<glavni_ekran> {
     final ikonaKategorije =
         kategorijeSaIkonama[oglas.kategorija] ?? Icons.more_horiz_rounded;
 
+    double? izracunajUdaljenostKm() {
+      if (oglas.udaljenostKm != null) return oglas.udaljenostKm;
+      if (oglas.lat != null &&
+          oglas.lng != null &&
+          _korisnikLat != null &&
+          _korisnikLng != null) {
+        const distance = Distance();
+        final km = distance.as(
+          LengthUnit.Kilometer,
+          LatLng(_korisnikLat!, _korisnikLng!),
+          LatLng(oglas.lat!, oglas.lng!),
+        );
+        return double.parse(km.toStringAsFixed(1));
+      }
+      return null;
+    }
+
+    final udaljenost = izracunajUdaljenostKm();
+
     return GestureDetector(
       onTap: () async {
         await Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => DetaljiOglasa(oglas: oglas)),
         );
-        setState(() {});
+        _osvjeziOglase();
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 15),
@@ -426,6 +598,15 @@ class _glavni_ekranState extends State<glavni_ekran> {
                       fontSize: 12,
                     ),
                   ),
+                  if (udaljenost != null)
+                    Text(
+                      'Udaljenost: ${udaljenost.toStringAsFixed(1)} km',
+                      style: TextStyle(
+                        color: boje.A?.withValues(alpha: 0.75),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   Align(
                     alignment: Alignment.bottomRight,
                     child: Text(
@@ -457,7 +638,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
             icon: Icon(Icons.handyman, size: 30, color: boje.A),
             onPressed: () async {
               await Navigator.pushNamed(context, '/ekrani/job_hub');
-              setState(() {});
+              _osvjeziOglase();
             },
           ),
           IconButton(
@@ -523,6 +704,6 @@ class _StickySearchDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(_StickySearchDelegate oldDelegate) {
-    return oldDelegate.visina != visina || oldDelegate.bgColor != bgColor;
+    return true;
   }
 }

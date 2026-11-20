@@ -8,6 +8,9 @@ class Oglas {
   final String opis;
   final String isplata;
   final String adresa;
+  final double? lat;
+  final double? lng;
+  final double? udaljenostKm;
   final String status;
   final String? autorIme;
   final String? autorId;
@@ -23,6 +26,9 @@ class Oglas {
     required this.opis,
     required this.isplata,
     required this.adresa,
+    this.lat,
+    this.lng,
+    this.udaljenostKm,
     required this.status,
     this.autorIme,
     this.autorId,
@@ -33,13 +39,21 @@ class Oglas {
     this.kategorija = "Ostalo",
   });
 
-  Oglas copyWith({String? autorIme}) {
+  Oglas copyWith({
+    String? autorIme,
+    double? lat,
+    double? lng,
+    double? udaljenostKm,
+  }) {
     return Oglas(
       id: id,
       naslov: naslov,
       opis: opis,
       isplata: isplata,
       adresa: adresa,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+      udaljenostKm: udaljenostKm ?? this.udaljenostKm,
       status: status,
       autorId: autorId,
       obavljacId: obavljacId,
@@ -52,29 +66,35 @@ class Oglas {
   }
 
   factory Oglas.fromJson(Map<String, dynamic> json) {
-    final profileData = json['autor'] as Map<String, dynamic>?;
-    final obavljacData = json['obavljac'] as Map<String, dynamic>?;
-    final reportsList = json['reports'] as List?;
-    final bool reportan = reportsList != null && reportsList.isNotEmpty;
+  final profileData = json['autor'] as Map<String, dynamic>?;
+  final obavljacData = json['obavljac'] as Map<String, dynamic>?;
+  final reportsList = json['reports'] as List?;
+  final bool reportan = json['je_reportan'] == true ||
+      (reportsList != null && reportsList.isNotEmpty);
 
-    return Oglas(
-      id: json['id'] ?? '',
-      naslov: json['naslov_oglasa'] ?? 'Bez naslova',
-      opis: json['opis_oglasa'] ?? '',
-      isplata: json['isplata_oglasa']?.toString() ?? '0',
-      adresa: json['adresa_oglasa'] ?? '',
-      status: json['status_oglasa'] ?? 'otvoren',
-      obavljacId: json['obavljac_id'],
-      obavljacIme: obavljacData?['puno_ime'],
-      createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'])
-          : DateTime.now(),
-      autorId: profileData?['id'] ?? json['autor_id']?.toString(),
-      autorIme: profileData?['puno_ime'] ?? 'Autor oglasa',
-      jeReportan: reportan,
-      kategorija: json['kategorija'] ?? 'Ostalo',
-    );
-  }
+  return Oglas(
+    id: json['id'] ?? '',
+    naslov: json['naslov_oglasa'] ?? 'Bez naslova',
+    opis: json['opis_oglasa'] ?? '',
+    isplata: json['isplata_oglasa']?.toString() ?? '0',
+    adresa: json['adresa_oglasa'] ?? '',
+    lat: json['lat'] != null ? (json['lat'] as num).toDouble() : null,
+    lng: json['lng'] != null ? (json['lng'] as num).toDouble() : null,
+    udaljenostKm: json['udaljenost_km'] != null
+        ? (json['udaljenost_km'] as num).toDouble()
+        : null,
+    status: json['status_oglasa'] ?? 'otvoren',
+    obavljacId: json['obavljac_id'],
+    obavljacIme: obavljacData?['puno_ime'],
+    createdAt: json['created_at'] != null
+        ? DateTime.parse(json['created_at'])
+        : DateTime.now(),
+    autorId: profileData?['id'] ?? json['autor_id']?.toString(),
+    autorIme: json['autor_ime'] ?? profileData?['puno_ime'] ?? 'Autor oglasa',
+    jeReportan: reportan,
+    kategorija: json['kategorija'] ?? 'Ostalo',
+  );
+}
 }
 
 // --- SERVIS ZA OGLASE ---
@@ -135,6 +155,54 @@ class OglasService {
     }
   }
 
+  // 1b. Dohvat oglasa unutar radijusa preko PostGIS RPC funkcije (kad složimo bazu)
+  Future<List<Oglas>> dohvatiOglaseUNutarRadijusa({
+  required double lat,
+  required double lng,
+  required double radijusKm,
+  String searchQuery = "",
+  double minIsplata = 0,
+  String? odabranaKategorija,
+}) async {
+  try {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return [];
+
+    final response = await _supabase.rpc(
+      'dohvati_oglase_u_radijusu',
+      params: {
+        'user_lat': lat,
+        'user_lng': lng,
+        'radijus_metri': radijusKm * 1000,
+        'search_query': searchQuery,
+        'min_isplata': minIsplata,
+        'odabrana_kategorija': odabranaKategorija,
+      },
+    );
+
+    final prijaveResponse = await _supabase
+        .from('prijave')
+        .select('oglas_id')
+        .eq('korisnik_id', user.id);
+
+    final prijavljeniIds = (prijaveResponse as List)
+        .map((item) => item['oglas_id'].toString())
+        .toSet();
+
+    return (response as List)
+        .map((json) => Oglas.fromJson(json as Map<String, dynamic>))
+        .where((o) =>
+            o.status == 'otvoren' &&
+            o.obavljacId == null &&
+            o.autorId != user.id &&
+            !prijavljeniIds.contains(o.id))
+        .toList();
+  } catch (e) {
+    debugPrint("Greška u OglasService.dohvatiOglaseUNutarRadijusa: $e");
+    return [];
+  }
+}
+
   // 2. Ažuriranje oglasa
   Future<void> azurirajOglas({
     required String oglasId,
@@ -142,16 +210,25 @@ class OglasService {
     required String opis,
     required String isplata,
     required String adresa,
+    double? lat,
+    double? lng,
   }) async {
     try {
+      final Map<String, dynamic> updateData = {
+        'naslov_oglasa': naslov.trim(),
+        'opis_oglasa': opis.trim(),
+        'isplata_oglasa': isplata.trim(),
+        'adresa_oglasa': adresa.trim(),
+      };
+
+      if (lat != null && lng != null) {
+        updateData['lat'] = lat;
+        updateData['lng'] = lng;
+      }
+
       await _supabase
           .from('oglasi')
-          .update({
-            'naslov_oglasa': naslov.trim(),
-            'opis_oglasa': opis.trim(),
-            'isplata_oglasa': isplata.trim(),
-            'adresa_oglasa': adresa.trim(),
-          })
+          .update(updateData)
           .eq('id', oglasId);
     } catch (e) {
       debugPrint("Greška u OglasService.azurirajOglas: $e");
@@ -245,13 +322,15 @@ class OglasService {
       rethrow;
     }
   }
-  
+
   Future<void> objaviOglas({
     required String naslov,
     required String adresa,
     required String isplata,
     required String opis,
     required String kategorija,
+    double? lat,
+    double? lng,
   }) async {
     try {
       final user = _supabase.auth.currentUser;
@@ -259,7 +338,7 @@ class OglasService {
         throw Exception("Korisnik nije prijavljen.");
       }
 
-      await _supabase.from('oglasi').insert({
+      final Map<String, dynamic> data = {
         'autor_id': user.id,
         'naslov_oglasa': naslov.trim(),
         'adresa_oglasa': adresa.trim(),
@@ -267,11 +346,17 @@ class OglasService {
         'opis_oglasa': opis.trim(),
         'kategorija': kategorija,
         'status_oglasa': 'otvoren',
-      });
+      };
+
+      if (lat != null && lng != null) {
+        data['lat'] = lat;
+        data['lng'] = lng;
+      }
+
+      await _supabase.from('oglasi').insert(data);
     } catch (e) {
       debugPrint("Greška u OglasService.objaviOglas: $e");
       rethrow;
     }
   }
 }
-
