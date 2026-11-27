@@ -12,11 +12,7 @@ class DetaljiOglasa extends StatelessWidget {
   final Oglas oglas;
   final bool samoPregled;
 
-  DetaljiOglasa({
-    super.key,
-    required this.oglas,
-    this.samoPregled = false,
-  });
+  DetaljiOglasa({super.key, required this.oglas, this.samoPregled = false});
 
   final PrijavaService _prijavaService = PrijavaService();
   final ReportService _reportService = ReportService();
@@ -25,7 +21,8 @@ class DetaljiOglasa extends StatelessWidget {
   Widget build(BuildContext context) {
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
     final bool imaLokaciju =
-        (oglas.lat != null && oglas.lng != null) || oglas.adresa.trim().isNotEmpty;
+        (oglas.lat != null && oglas.lng != null) ||
+        oglas.adresa.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: boje.bg,
@@ -52,21 +49,23 @@ class DetaljiOglasa extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.red[50]!.withValues(alpha: 0.85),
-                      border: Border.all(color: Colors.redAccent, width: 1.5),
+                      color: boje.B?.withValues(alpha: 0.9),
+                      border: Border.all(color: Colors.red, width: 1.5),
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: const [
-                        BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (boje.A ?? Colors.black).withValues(
+                            alpha: 0.12,
+                          ),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
                       ],
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.gavel_rounded,
-                          color: Colors.redAccent,
-                          size: 28,
-                        ),
+                        Icon(Icons.gavel_rounded, color: boje.A, size: 28),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -75,16 +74,16 @@ class DetaljiOglasa extends StatelessWidget {
                               Text(
                                 "Upozorenje zajednice",
                                 style: TextStyle(
-                                  color: Colors.red[900],
+                                  color: boje.A,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              const Text(
+                              Text(
                                 "Ovaj oglas je reportan od strane zajednice zbog sumnje na kršenje pravila ili prijevaru. Postupajte s oprezom!",
                                 style: TextStyle(
-                                  color: Colors.black87,
+                                  color: boje.A?.withValues(alpha: 0.85),
                                   fontSize: 13,
                                   height: 1.3,
                                 ),
@@ -106,10 +105,16 @@ class DetaljiOglasa extends StatelessWidget {
                   Icons.location_on_rounded,
                   boje,
                   trailingIcon: imaLokaciju ? Icons.map_rounded : null,
-                  onTap: imaLokaciju ? () => _otvoriKartuOglasa(context, boje) : null,
+                  onTap: imaLokaciju
+                      ? () => _otvoriKartuOglasa(context, boje)
+                      : null,
                 ),
                 const SizedBox(height: 12),
-                _buildDetailRow('Isplata: ${oglas.isplata}€', Icons.euro_rounded, boje),
+                _buildDetailRow(
+                  'Isplata: ${oglas.isplata}€',
+                  Icons.euro_rounded,
+                  boje,
+                ),
 
                 const SizedBox(height: 25),
                 _buildDescriptionCard(boje),
@@ -141,7 +146,10 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  Future<void> _otvoriKartuOglasa(BuildContext context, QuickJobsColors boje) async {
+  Future<void> _otvoriKartuOglasa(
+    BuildContext context,
+    QuickJobsColors boje,
+  ) async {
     LatLng? tocka;
 
     if (oglas.lat != null && oglas.lng != null) {
@@ -190,7 +198,9 @@ class DetaljiOglasa extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        oglas.adresa.isNotEmpty ? oglas.adresa : 'Lokacija posla',
+                        oglas.adresa.isNotEmpty
+                            ? oglas.adresa
+                            : 'Lokacija posla',
                         style: TextStyle(
                           color: boje.A,
                           fontWeight: FontWeight.bold,
@@ -219,19 +229,22 @@ class DetaljiOglasa extends StatelessWidget {
                       ),
                       children: [
                         TileLayer(
-                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          subdomains: const ['a', 'b', 'c', 'd'],
                           userAgentPackageName: 'com.quickjobs.app',
                         ),
                         MarkerLayer(
                           markers: [
                             Marker(
-                              point: prikazanaTocka,
-                              width: 50,
-                              height: 50,
-                              child: const Icon(
+                              point: prikazanaTocka, // tvoja LatLng koordinata
+                              width: 48,
+                              height: 48,
+                              alignment: Alignment.topCenter,
+                              child: Icon(
                                 Icons.location_pin,
-                                color: Colors.redAccent,
-                                size: 44,
+                                size: 48,
+                                color: Colors.black,
                               ),
                             ),
                           ],
@@ -250,7 +263,8 @@ class DetaljiOglasa extends StatelessWidget {
 
   Widget _buildKategorijaBadge(QuickJobsColors boje) {
     final nazivKategorije = oglas.kategorija;
-    final ikonaKategorije = kategorijeSaIkonama[nazivKategorije] ?? Icons.more_horiz_rounded;
+    final ikonaKategorije =
+        kategorijeSaIkonama[nazivKategorije] ?? Icons.more_horiz_rounded;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -373,7 +387,11 @@ class DetaljiOglasa extends StatelessWidget {
         const SizedBox(height: 10),
         Text(
           'Prijavi se na posao!',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: boje.A),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: boje.A,
+          ),
         ),
       ],
     );
@@ -408,7 +426,11 @@ class DetaljiOglasa extends StatelessWidget {
         ),
         Text(
           'Opis oglasa',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: boje.A),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: boje.A,
+          ),
         ),
         IconButton(
           icon: const Icon(
@@ -458,7 +480,11 @@ class DetaljiOglasa extends StatelessWidget {
         children: [
           Text(
             "Detaljni opis posla:",
-            style: TextStyle(color: boje.A?.withValues(alpha: 0.7), fontWeight: FontWeight.bold, fontSize: 13),
+            style: TextStyle(
+              color: boje.A?.withValues(alpha: 0.7),
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -470,7 +496,11 @@ class DetaljiOglasa extends StatelessWidget {
     );
   }
 
-  void _showSnack(BuildContext context, String message, {required bool isError}) {
+  void _showSnack(
+    BuildContext context,
+    String message, {
+    required bool isError,
+  }) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -531,13 +561,13 @@ class DetaljiOglasa extends StatelessWidget {
 
     if (onTap == null) return rowContent;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: rowContent,
-    );
+    return GestureDetector(onTap: onTap, child: rowContent);
   }
 
-  void _prikaziDijalogZaPrijavuOglasa(BuildContext context, QuickJobsColors boje) {
+  void _prikaziDijalogZaPrijavuOglasa(
+    BuildContext context,
+    QuickJobsColors boje,
+  ) {
     String odabraniRazlog = "Scam / Prijevara";
     final komentarController = TextEditingController();
 
@@ -562,7 +592,10 @@ class DetaljiOglasa extends StatelessWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text("Odaberite razlog zašto prijavljujete ovaj oglas:", style: TextStyle(color: boje.A)),
+              Text(
+                "Odaberite razlog zašto prijavljujete ovaj oglas:",
+                style: TextStyle(color: boje.A),
+              ),
               const SizedBox(height: 15),
               DropdownButtonFormField<String>(
                 value: odabraniRazlog,
@@ -576,12 +609,20 @@ class DetaljiOglasa extends StatelessWidget {
                     borderSide: BorderSide.none,
                   ),
                 ),
-                items: [
-                  "Scam / Prijevara",
-                  "Lažni oglas",
-                  "Neprimjeren sadržaj",
-                  "Ostalo",
-                ].map((r) => DropdownMenuItem(value: r, child: Text(r, style: TextStyle(color: boje.A)))).toList(),
+                items:
+                    [
+                          "Scam / Prijevara",
+                          "Lažni oglas",
+                          "Neprimjeren sadržaj",
+                          "Ostalo",
+                        ]
+                        .map(
+                          (r) => DropdownMenuItem(
+                            value: r,
+                            child: Text(r, style: TextStyle(color: boje.A)),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (v) => setDialogState(() => odabraniRazlog = v!),
               ),
               const SizedBox(height: 15),

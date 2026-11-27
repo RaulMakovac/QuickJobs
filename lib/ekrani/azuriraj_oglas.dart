@@ -52,9 +52,14 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
       pocetnaTocka = LatLng(_odabraniLat!, _odabraniLng!);
     } else if (_adresaController.text.trim().isNotEmpty) {
       try {
-        final lokacije = await locationFromAddress(_adresaController.text.trim());
+        final lokacije = await locationFromAddress(
+          _adresaController.text.trim(),
+        );
         if (lokacije.isNotEmpty) {
-          pocetnaTocka = LatLng(lokacije.first.latitude, lokacije.first.longitude);
+          pocetnaTocka = LatLng(
+            lokacije.first.latitude,
+            lokacije.first.longitude,
+          );
         }
       } catch (_) {}
     }
@@ -102,7 +107,10 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 4,
+                    ),
                     child: Text(
                       privremenaAdresa.isNotEmpty
                           ? privremenaAdresa
@@ -129,16 +137,18 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
                                 privremenaTocka = point;
                               });
                               try {
-                                final placemarks = await placemarkFromCoordinates(
-                                  point.latitude,
-                                  point.longitude,
-                                );
+                                final placemarks =
+                                    await placemarkFromCoordinates(
+                                      point.latitude,
+                                      point.longitude,
+                                    );
                                 if (placemarks.isNotEmpty) {
                                   final p = placemarks.first;
-                                  final dijelovi = [
-                                    p.street,
-                                    p.locality,
-                                  ].where((e) => e != null && e.trim().isNotEmpty).toList();
+                                  final dijelovi = [p.street, p.locality]
+                                      .where(
+                                        (e) => e != null && e.trim().isNotEmpty,
+                                      )
+                                      .toList();
                                   if (dijelovi.isNotEmpty) {
                                     setModalState(() {
                                       privremenaAdresa = dijelovi.join(', ');
@@ -150,19 +160,22 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
                           ),
                           children: [
                             TileLayer(
-                              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                              urlTemplate:
+                                  'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                               userAgentPackageName: 'com.quickjobs.app',
                             ),
                             MarkerLayer(
                               markers: [
                                 Marker(
-                                  point: privremenaTocka,
-                                  width: 50,
-                                  height: 50,
-                                  child: const Icon(
+                                  point:
+                                      privremenaTocka, // tvoja LatLng koordinata
+                                  width: 48,
+                                  height: 48,
+                                  alignment: Alignment.topCenter,
+                                  child: Icon(
                                     Icons.location_pin,
-                                    color: Colors.redAccent,
-                                    size: 44,
+                                    size: 48,
+                                    color: Colors.black,
                                   ),
                                 ),
                               ],
@@ -305,7 +318,8 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
                                 onPressed: () => _odaberiLokacijuNaMapi(boje),
                               ),
                             ),
-                            if (_odabraniLat != null && _odabraniLng != null) ...[
+                            if (_odabraniLat != null &&
+                                _odabraniLng != null) ...[
                               const SizedBox(height: 6),
                               Padding(
                                 padding: const EdgeInsets.only(left: 10),

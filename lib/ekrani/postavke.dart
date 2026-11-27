@@ -188,8 +188,8 @@ class PostavkeEkran extends StatelessWidget {
                         boje: boje,
                         onTap: () => _obrisiRacun(context, boje),
                         isZadnji: true,
-                        bojaTeksta: Colors.redAccent,
-                        bojaIkone: Colors.redAccent,
+                        bojaTeksta: const Color.fromARGB(255, 239, 28, 28),
+                        bojaIkone: const Color.fromARGB(255, 242, 23, 23),
                       ),
                     ], boje),
 

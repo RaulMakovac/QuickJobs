@@ -61,7 +61,7 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false, 
           theme: lightTheme,
           darkTheme: darkTheme,
-          themeMode: trenutniMod, // Ovdje sada dinamički mijenjamo temu!
+          themeMode: trenutniMod, // Ovdje sada dinamički mijenja temu
           
           builder: (context, child) {
             return PozadinaKrugovi(

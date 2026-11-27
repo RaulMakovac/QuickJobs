@@ -138,10 +138,7 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                   children: [
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: Icon(
-                        Icons.arrow_back_ios_new,
-                        color: boje.A,
-                      ),
+                      icon: Icon(Icons.arrow_back_ios_new, color: boje.A),
                     ),
                     Expanded(
                       child: Text(
@@ -161,7 +158,10 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                 Text(
                   'Ovdje možete objaviti oglas za koji god posao vam je potrebna pomoć!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: boje.A?.withValues(alpha: 0.8)),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: boje.A?.withValues(alpha: 0.8),
+                  ),
                 ),
                 const SizedBox(height: 30),
 
@@ -174,7 +174,10 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                       decoration: BoxDecoration(
                         color: boje.C,
                         borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: boje.A!.withValues(alpha: 0.3), width: 1),
+                        border: Border.all(
+                          color: boje.A!.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
                       ),
                       child: Center(
                         child: Text(
@@ -186,7 +189,11 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                     ),
                     const SizedBox(width: 15),
                     Expanded(
-                      child: _customField("Naziv posla", _naslovController, boje),
+                      child: _customField(
+                        "Naziv posla",
+                        _naslovController,
+                        boje,
+                      ),
                     ),
                   ],
                 ),
@@ -202,7 +209,10 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                       decoration: BoxDecoration(
                         color: boje.C,
                         borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: boje.A!.withValues(alpha: 0.3), width: 1),
+                        border: Border.all(
+                          color: boje.A!.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
                       ),
                       child: IconButton(
                         onPressed: _otvoriKartuZaLokaciju,
@@ -228,7 +238,12 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                 ],
                 const SizedBox(height: 15),
 
-                _customField("Isplata:", _isplataController, boje, isNumber: true),
+                _customField(
+                  "Isplata:",
+                  _isplataController,
+                  boje,
+                  isNumber: true,
+                ),
                 const SizedBox(height: 15),
 
                 Container(
@@ -237,7 +252,10 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                   decoration: BoxDecoration(
                     color: boje.C,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: boje.A!.withValues(alpha: 0.3), width: 1),
+                    border: Border.all(
+                      color: boje.A!.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
                   ),
                   child: TextField(
                     controller: _opisController,
@@ -266,7 +284,10 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                   decoration: BoxDecoration(
                     color: boje.C,
                     borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: boje.A!.withValues(alpha: 0.3), width: 1),
+                    border: Border.all(
+                      color: boje.A!.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
                   ),
                   child: DropdownButtonFormField<String>(
                     value: _odabranaKategorija,
@@ -280,10 +301,7 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.zero,
                     ),
-                    icon: Icon(
-                      Icons.arrow_drop_down,
-                      color: boje.A,
-                    ),
+                    icon: Icon(Icons.arrow_drop_down, color: boje.A),
                     items: kategorijeSaIkonama.keys.map((String kategorija) {
                       return DropdownMenuItem<String>(
                         value: kategorija,
@@ -336,15 +354,9 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
                     child: _isLoading
                         ? Padding(
                             padding: const EdgeInsets.all(20),
-                            child: CircularProgressIndicator(
-                              color: boje.bg,
-                            ),
+                            child: CircularProgressIndicator(color: boje.bg),
                           )
-                        : Icon(
-                            Icons.check,
-                            size: 50,
-                            color: boje.bg,
-                          ),
+                        : Icon(Icons.check, size: 50, color: boje.bg),
                   ),
                 ),
               ],
@@ -371,10 +383,7 @@ class _ObjavaOglasaState extends State<ObjavaOglasa> {
       child: TextField(
         controller: controller,
         keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-        style: TextStyle(
-          color: boje.A,
-          fontWeight: FontWeight.w600,
-        ),
+        style: TextStyle(color: boje.A, fontWeight: FontWeight.w600),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(
@@ -392,10 +401,7 @@ class _OdabirLokacijeEkran extends StatefulWidget {
   final LatLng? pocetnaLokacija;
   final String? pocetnaAdresa;
 
-  const _OdabirLokacijeEkran({
-    this.pocetnaLokacija,
-    this.pocetnaAdresa,
-  });
+  const _OdabirLokacijeEkran({this.pocetnaLokacija, this.pocetnaAdresa});
 
   @override
   State<_OdabirLokacijeEkran> createState() => _OdabirLokacijeEkranState();
@@ -442,11 +448,10 @@ class _OdabirLokacijeEkranState extends State<_OdabirLokacijeEkran> {
       );
       if (placemarks.isNotEmpty && mounted) {
         final p = placemarks.first;
-        final dijelovi = [
-          p.street,
-          p.postalCode,
-          p.locality,
-        ].where((e) => e != null && e.trim().isNotEmpty).cast<String>().toList();
+        final dijelovi = [p.street, p.postalCode, p.locality]
+            .where((e) => e != null && e.trim().isNotEmpty)
+            .cast<String>()
+            .toList();
 
         if (dijelovi.isNotEmpty) {
           setState(() => _predlozenaAdresa = dijelovi.join(', '));
@@ -491,14 +496,11 @@ class _OdabirLokacijeEkranState extends State<_OdabirLokacijeEkran> {
                 MarkerLayer(
                   markers: [
                     Marker(
-                      point: _trenutnaTocka,
+                      point: _trenutnaTocka, // tvoja LatLng koordinata
                       width: 48,
                       height: 48,
-                      child: const Icon(
-                        Icons.location_pin,
-                        size: 46,
-                        color: Colors.redAccent,
-                      ),
+                      alignment: Alignment.topCenter,
+                      child: Icon(Icons.location_pin, size: 48, color:Colors.black),
                     ),
                   ],
                 ),
@@ -515,7 +517,7 @@ class _OdabirLokacijeEkranState extends State<_OdabirLokacijeEkran> {
                   _trazimAdresu
                       ? 'Tražim adresu za odabranu točku...'
                       : (_predlozenaAdresa ??
-                          'Dodirnite kartu za postavljanje točne točke.'),
+                            'Dodirnite kartu za postavljanje točne točke.'),
                   style: TextStyle(color: boje.A, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 6),
