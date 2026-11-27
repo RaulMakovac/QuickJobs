@@ -92,121 +92,206 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
   @override
   Widget build(BuildContext context) {
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool jeWeb = MediaQuery.sizeOf(context).width >= 800;
 
     return Scaffold(
       backgroundColor: boje.bg,
       body: PozadinaKrugovi(
         krugBoja: boje.C,
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(top: 16),
-                      child: IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: Icon(
-                          Icons.arrow_back_ios_new,
-                          size: 26,
-                          color: boje.A,
-                        ),
+          child: jeWeb
+              ? _buildWebView(boje, isDark)
+              : _buildMobileView(boje),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebView(QuickJobsColors boje, bool isDark) {
+    final Color boxPozadina = isDark
+        ? (boje.A ?? Colors.black).withValues(alpha: 0.28)
+        : (boje.A ?? Colors.black).withValues(alpha: 0.08);
+
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
+          decoration: BoxDecoration(
+            color: boje.C?.withValues(alpha: 1.0),
+            border: Border(
+              bottom: BorderSide(
+                color: (boje.A ?? Colors.black).withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(Icons.arrow_back_rounded, color: boje.A),
+                tooltip: 'Natrag',
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'QuickJobs',
+                style: TextStyle(
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                  color: boje.A,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 32,
+                  ),
+                  decoration: BoxDecoration(
+                    color: boxPozadina,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(
+                      color: (boje.A ?? Colors.black).withValues(
+                        alpha: isDark ? 0.18 : 0.12,
                       ),
                     ),
                   ),
-                  Text(
-                    'Registracija',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: boje.A,
-                      letterSpacing: 1.2,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: _buildFormChildren(boje, pokaziMobilniBack: false),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Molimo vas da unesete vaše korisničke podatke',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: boje.A),
-                  ),
-                  const SizedBox(height: 40),
-                  _buildInputField(
-                    _imeController,
-                    'Ime i prezime',
-                    Icons.person,
-                    boje,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildInputField(
-                    _emailController,
-                    'E-mail adresa',
-                    Icons.email,
-                    boje,
-                    isEmail: true,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildInputField(
-                    _telefonController,
-                    'Broj telefona',
-                    Icons.phone,
-                    boje,
-                    isPhone: true,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildInputField(
-                    _lozinkaController,
-                    'Lozinka',
-                    Icons.lock,
-                    boje,
-                    isPassword: true,
-                  ),
-                  const SizedBox(height: 24),
-                  _buildCheckbox('', _prihvacamUvjete, (value) {
-                    setState(() => _prihvacamUvjete = value!);
-                  }, boje, isLegal: true),
-                  const SizedBox(height: 40),
-                  _isLoading
-                      ? Center(
-                          child: CircularProgressIndicator(
-                            color: boje.A,
-                          ),
-                        )
-                      : _buildMainButton(
-                          'Registracija',
-                          boje.A!,
-                          boje.bg!,
-                          _signUp,
-                        ),
-                  const SizedBox(height: 16),
-                  _buildMainButton(
-                    'Log in',
-                    boje.B!,
-                    boje.A!,
-                    () => Navigator.pushNamed(context, '/ekrani/login'),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Već imate profil?',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: boje.A,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
+                ),
               ),
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildMobileView(QuickJobsColors boje) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: _buildFormChildren(boje, pokaziMobilniBack: true),
+        ),
       ),
     );
+  }
+
+  List<Widget> _buildFormChildren(
+    QuickJobsColors boje, {
+    required bool pokaziMobilniBack,
+  }) {
+    return [
+      if (pokaziMobilniBack)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            margin: const EdgeInsets.only(top: 16),
+            child: IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: Icon(
+                Icons.arrow_back_ios_new,
+                size: 26,
+                color: boje.A,
+              ),
+            ),
+          ),
+        ),
+      Text(
+        'Registracija',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: pokaziMobilniBack ? 36 : 30,
+          fontWeight: FontWeight.bold,
+          color: boje.A,
+          letterSpacing: 1.2,
+        ),
+      ),
+      const SizedBox(height: 12),
+      Text(
+        'Molimo vas da unesete vaše korisničke podatke',
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 16, color: boje.A),
+      ),
+      const SizedBox(height: 32),
+      _buildInputField(
+        _imeController,
+        'Ime i prezime',
+        Icons.person,
+        boje,
+      ),
+      const SizedBox(height: 16),
+      _buildInputField(
+        _emailController,
+        'E-mail adresa',
+        Icons.email,
+        boje,
+        isEmail: true,
+      ),
+      const SizedBox(height: 16),
+      _buildInputField(
+        _telefonController,
+        'Broj telefona',
+        Icons.phone,
+        boje,
+        isPhone: true,
+      ),
+      const SizedBox(height: 16),
+      _buildInputField(
+        _lozinkaController,
+        'Lozinka',
+        Icons.lock,
+        boje,
+        isPassword: true,
+      ),
+      const SizedBox(height: 24),
+      _buildCheckbox('', _prihvacamUvjete, (value) {
+        setState(() => _prihvacamUvjete = value!);
+      }, boje, isLegal: true),
+      const SizedBox(height: 32),
+      _isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                color: boje.A,
+              ),
+            )
+          : _buildMainButton(
+              'Registracija',
+              boje.A!,
+              boje.bg!,
+              _signUp,
+            ),
+      const SizedBox(height: 16),
+      _buildMainButton(
+        'Log in',
+        boje.B!,
+        boje.A!,
+        () => Navigator.pushNamed(context, '/ekrani/login'),
+      ),
+      const SizedBox(height: 24),
+      Text(
+        'Već imate profil?',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: 14,
+          color: boje.A,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      const SizedBox(height: 24),
+    ];
   }
 
   Widget _buildInputField(
@@ -253,7 +338,7 @@ class _RegistracijaEkranState extends State<RegistracijaEkran> {
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 24,
-            vertical: 16,
+            vertical: 10,
           ),
         ),
       ),

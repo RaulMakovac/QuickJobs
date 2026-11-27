@@ -103,188 +103,241 @@ class PostavkeEkran extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
+    final bool jeWeb = MediaQuery.sizeOf(context).width >= 800;
 
     return Scaffold(
       backgroundColor: boje.bg,
       body: PozadinaKrugovi(
         krugBoja: boje.C,
         child: SafeArea(
-          child: Column(
+          child: jeWeb ? _buildWebView(context, boje) : _buildMobileView(context, boje),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWebView(BuildContext context, QuickJobsColors boje) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 16),
+          decoration: BoxDecoration(
+            color: (boje.C ?? boje.B)?.withValues(alpha: 1.0),
+            border: Border(
+              bottom: BorderSide(
+                color: (boje.A ?? Colors.black).withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+          child: Row(
             children: [
-              _buildHeader(context, boje),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 25,
-                    vertical: 10,
-                  ),
-                  children: [
-                    _buildPostavkeGrupa([
-                      _PostavkaItem(
-                        ikona: dolaziIzJednostavnog
-                            ? Icons.dashboard_customize_rounded
-                            : Icons.auto_awesome_motion_rounded,
-                        naslov: dolaziIzJednostavnog
-                            ? "Standardni način rada"
-                            : "Jednostavan način rada",
-                        boje: boje,
-                        onTap: () async {
-                          final supabase = Supabase.instance.client;
-                          final user = supabase.auth.currentUser;
-
-                          if (dolaziIzJednostavnog) {
-                            // Prebacujemo na standardni (kandidat)
-                            if (user != null) {
-                              await supabase.auth.updateUser(
-                                UserAttributes(data: {'uloga': 'kandidat'}),
-                              );
-                            }
-                            if (context.mounted) {
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const glavni_ekran(),
-                                ),
-                                (route) => false,
-                              );
-                            }
-                          } else {
-                            // Prebacujemo na jednostavni (poslodavac)
-                            if (user != null) {
-                              await supabase.auth.updateUser(
-                                UserAttributes(data: {'uloga': 'poslodavac'}),
-                              );
-                            }
-                            if (context.mounted) {
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const JednostavniIzbornik(),
-                                ),
-                                (route) => false,
-                              );
-                            }
-                          }
-                        },
-                      ),
-                      _PostavkaItem(
-                        ikona: Icons.description_outlined,
-                        naslov: "Opći uvjeti korištenja",
-                        boje: boje,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const UvjetiKoristenjaEkran(),
-                            ),
-                          );
-                        },
-                      ),
-                      _PostavkaItem(
-                        ikona: Icons.delete_forever_rounded,
-                        naslov: "Obriši moj račun",
-                        boje: boje,
-                        onTap: () => _obrisiRacun(context, boje),
-                        isZadnji: true,
-                        bojaTeksta: const Color.fromARGB(255, 239, 28, 28),
-                        bojaIkone: const Color.fromARGB(255, 242, 23, 23),
-                      ),
-                    ], boje),
-
-                    const SizedBox(height: 25),
-
-                    _buildPostavkeGrupa([
-                      ValueListenableBuilder<ThemeMode>(
-                        valueListenable: themeNotifier,
-                        builder: (context, trenutniMode, _) {
-                          final bool isDark =
-                              trenutniMode == ThemeMode.dark ||
-                              (trenutniMode == ThemeMode.system &&
-                                  MediaQuery.platformBrightnessOf(context) ==
-                                      Brightness.dark);
-
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 8,
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  isDark
-                                      ? Icons.dark_mode_rounded
-                                      : Icons.light_mode_rounded,
-                                  color: boje.A,
-                                  size: 24,
-                                ),
-                                const SizedBox(width: 20),
-                                Expanded(
-                                  child: Text(
-                                    isDark
-                                        ? "Tamni način rada"
-                                        : "Svijetli način rada",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: boje.A,
-                                    ),
-                                  ),
-                                ),
-                                Switch(
-                                  value: isDark,
-                                  activeColor: boje.A,
-                                  activeTrackColor: boje.A?.withValues(
-                                    alpha: 0.4,
-                                  ),
-                                  inactiveThumbColor: boje.A,
-                                  inactiveTrackColor: boje.bg,
-                                  onChanged: (val) {
-                                    themeNotifier.value = val
-                                        ? ThemeMode.dark
-                                        : ThemeMode.light;
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                      _PostavkaItem(
-                        ikona: Icons.grid_view_rounded,
-                        naslov: "Broj oglasa po stranici",
-                        boje: boje,
-                        onTap: () {},
-                      ),
-                      _PostavkaItem(
-                        ikona: Icons.format_size_rounded,
-                        naslov: "Veličina fonta",
-                        boje: boje,
-                        onTap: () {},
-                      ),
-                      _PostavkaItem(
-                        ikona: Icons.contrast_rounded,
-                        naslov: "Visok kontrast",
-                        boje: boje,
-                        onTap: () {},
-                      ),
-                      _PostavkaItem(
-                        ikona: Icons.check_box_outlined,
-                        naslov: "Prihvaćene postavke",
-                        boje: boje,
-                        onTap: () {},
-                        isZadnji: true,
-                      ),
-                    ], boje),
-                  ],
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: Icon(Icons.arrow_back_rounded, color: boje.A),
+                tooltip: 'Natrag',
+              ),
+              const SizedBox(width: 12),
+              Text(
+                "Postavke",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: boje.A,
                 ),
               ),
             ],
           ),
         ),
-      ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: Column(
+                  children: _buildGrupePostavki(context, boje),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
+  }
+
+  Widget _buildMobileView(BuildContext context, QuickJobsColors boje) {
+    return Column(
+      children: [
+        _buildHeader(context, boje),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 25,
+              vertical: 10,
+            ),
+            children: _buildGrupePostavki(context, boje),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildGrupePostavki(
+    BuildContext context,
+    QuickJobsColors boje,
+  ) {
+    return [
+      _buildPostavkeGrupa([
+        _PostavkaItem(
+          ikona: dolaziIzJednostavnog
+              ? Icons.dashboard_customize_rounded
+              : Icons.auto_awesome_motion_rounded,
+          naslov: dolaziIzJednostavnog
+              ? "Standardni način rada"
+              : "Jednostavan način rada",
+          boje: boje,
+          onTap: () async {
+            final supabase = Supabase.instance.client;
+            final user = supabase.auth.currentUser;
+
+            if (dolaziIzJednostavnog) {
+              // Prebacujemo na standardni (kandidat)
+              if (user != null) {
+                await supabase.auth.updateUser(
+                  UserAttributes(data: {'uloga': 'kandidat'}),
+                );
+              }
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const glavni_ekran(),
+                  ),
+                  (route) => false,
+                );
+              }
+            } else {
+              // Prebacujemo na jednostavni (poslodavac)
+              if (user != null) {
+                await supabase.auth.updateUser(
+                  UserAttributes(data: {'uloga': 'poslodavac'}),
+                );
+              }
+              if (context.mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const JednostavniIzbornik(),
+                  ),
+                  (route) => false,
+                );
+              }
+            }
+          },
+        ),
+        _PostavkaItem(
+          ikona: Icons.description_outlined,
+          naslov: "Opći uvjeti korištenja",
+          boje: boje,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const UvjetiKoristenjaEkran(),
+              ),
+            );
+          },
+        ),
+        _PostavkaItem(
+          ikona: Icons.delete_forever_rounded,
+          naslov: "Obriši moj račun",
+          boje: boje,
+          onTap: () => _obrisiRacun(context, boje),
+          isZadnji: true,
+          bojaTeksta: const Color.fromARGB(255, 239, 28, 28),
+          bojaIkone: const Color.fromARGB(255, 242, 23, 23),
+        ),
+      ], boje),
+      const SizedBox(height: 25),
+      _buildPostavkeGrupa([
+        ValueListenableBuilder<ThemeMode>(
+          valueListenable: themeNotifier,
+          builder: (context, trenutniMode, _) {
+            final bool isDark =
+                trenutniMode == ThemeMode.dark ||
+                (trenutniMode == ThemeMode.system &&
+                    MediaQuery.platformBrightnessOf(context) ==
+                        Brightness.dark);
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 8,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isDark
+                        ? Icons.dark_mode_rounded
+                        : Icons.light_mode_rounded,
+                    color: boje.A,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Text(
+                      isDark ? "Tamni način rada" : "Svijetli način rada",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: boje.A,
+                      ),
+                    ),
+                  ),
+                  Switch(
+                    value: isDark,
+                    activeColor: boje.A,
+                    activeTrackColor: boje.A?.withValues(
+                      alpha: 0.4,
+                    ),
+                    inactiveThumbColor: boje.A,
+                    inactiveTrackColor: boje.bg,
+                    onChanged: (val) {
+                      themeNotifier.value = val ? ThemeMode.dark : ThemeMode.light;
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        _PostavkaItem(
+          ikona: Icons.grid_view_rounded,
+          naslov: "Broj oglasa po stranici",
+          boje: boje,
+          onTap: () {},
+        ),
+        _PostavkaItem(
+          ikona: Icons.format_size_rounded,
+          naslov: "Veličina fonta",
+          boje: boje,
+          onTap: () {},
+        ),
+        _PostavkaItem(
+          ikona: Icons.contrast_rounded,
+          naslov: "Visok kontrast",
+          boje: boje,
+          onTap: () {},
+        ),
+        _PostavkaItem(
+          ikona: Icons.check_box_outlined,
+          naslov: "Prihvaćene postavke",
+          boje: boje,
+          onTap: () {},
+          isZadnji: true,
+        ),
+      ], boje),
+    ];
   }
 
   Widget _buildHeader(BuildContext context, QuickJobsColors boje) {

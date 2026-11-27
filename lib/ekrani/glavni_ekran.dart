@@ -18,6 +18,7 @@ class glavni_ekran extends StatefulWidget {
 }
 
 class _glavni_ekranState extends State<glavni_ekran> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final OglasService _oglasService = OglasService();
   final TextEditingController _searchController = TextEditingController();
 
@@ -53,7 +54,7 @@ class _glavni_ekranState extends State<glavni_ekran> {
     super.dispose();
   }
 
-Future<void> _dohvatiLokacijuKorisnika() async {
+  Future<void> _dohvatiLokacijuKorisnika() async {
     try {
       final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       debugPrint('GPS serviceEnabled: $serviceEnabled');
@@ -94,6 +95,11 @@ Future<void> _dohvatiLokacijuKorisnika() async {
   }
 
   Future<List<Oglas>> _dohvatiOglase() {
+    final String? efektivnaKategorija =
+        (_odabranaKategorija == null || _odabranaKategorija == "Sve kategorije")
+        ? null
+        : _odabranaKategorija;
+
     if (_maxUdaljenostKm != null &&
         _korisnikLat != null &&
         _korisnikLng != null) {
@@ -103,14 +109,14 @@ Future<void> _dohvatiLokacijuKorisnika() async {
         radijusKm: _maxUdaljenostKm!,
         searchQuery: _searchQuery,
         minIsplata: _minIsplata,
-        odabranaKategorija: _odabranaKategorija,
+        odabranaKategorija: efektivnaKategorija,
       );
     }
 
     return _oglasService.dohvatiDostupneOglase(
       searchQuery: _searchQuery,
       minIsplata: _minIsplata,
-      odabranaKategorija: _odabranaKategorija,
+      odabranaKategorija: efektivnaKategorija,
     );
   }
 
@@ -118,132 +124,611 @@ Future<void> _dohvatiLokacijuKorisnika() async {
   Widget build(BuildContext context) {
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final double sirinaEkrana = MediaQuery.sizeOf(context).width;
+    final bool jeWebLayout = sirinaEkrana >= 800;
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: boje.bg,
+      drawer: jeWebLayout ? _buildWebDrawer(boje, isDark) : null,
       body: PozadinaKrugovi(
         krugBoja: boje.C,
         child: SafeArea(
-          child: CustomScrollView(
-            slivers: [
-              // 1. HEADER
-              SliverAppBar(
-                automaticallyImplyLeading: false,
-                backgroundColor: Colors.transparent,
-                expandedHeight: 120,
-                floating: false,
-                pinned: false,
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildHeaderIcon(
-                          Icons.settings_outlined,
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const PostavkeEkran(
-                                dolaziIzJednostavnog: false,
-                              ),
-                            ),
-                          ),
-                          boje,
+          child: jeWebLayout
+              ? _buildWebContent(boje, isDark, sirinaEkrana)
+              : _buildMobileContent(boje, isDark),
+        ),
+      ),
+      bottomNavigationBar: jeWebLayout ? null : _buildBottomNav(boje),
+    );
+  }
+
+  // WEB LAYOUT: Top bar (Logo + Pretraga + Objavi + Hamburger) + brze kategorije + mreža oglasa
+  Widget _buildWebContent(
+    QuickJobsColors boje,
+    bool isDark,
+    double sirinaEkrana,
+  ) {
+    final double bocniPadding = sirinaEkrana > 1360 ? 72 : 36;
+
+    return CustomScrollView(
+      slivers: [
+        // Gornja navigacijska traka
+        SliverToBoxAdapter(
+          child: Container(
+            padding: EdgeInsets.fromLTRB(bocniPadding, 16, bocniPadding, 16),
+            decoration: BoxDecoration(
+              color: (boje.C ?? boje.B)?.withValues(alpha: 1.0),
+              border: Border(
+                bottom: BorderSide(
+                  color: (boje.A ?? Colors.black).withValues(alpha: 0.12),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    _searchController.clear();
+                    setState(() {
+                      _searchQuery = "";
+                      _minIsplata = 0;
+                      _maxUdaljenostKm = null;
+                      _odabranaKategorija = null;
+                    });
+                    _osvjeziOglase();
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildCentralLogo(isDark, size: 46),
+                      const SizedBox(width: 10),
+                      Text(
+                        'QuickJobs',
+                        style: TextStyle(
+                          color: boje.A,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w800,
                         ),
-                        _buildCentralLogo(isDark),
-                        _buildHeaderIcon(
-                          Icons.account_box,
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const KorisnickiProfil(),
-                            ),
-                          ),
-                          boje,
-                          size: 35,
-                        ),
-                      ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 28),
+                Expanded(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 620),
+                      child: _buildSearchBar(boje),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 20),
+                FilledButton.icon(
+                  onPressed: () async {
+                    await Navigator.pushNamed(context, '/ekrani/objava_oglasa');
+                    _osvjeziOglase();
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: boje.A,
+                    foregroundColor: boje.bg,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 18,
+                      vertical: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  icon: const Icon(Icons.add_rounded, size: 20),
+                  label: const Text(
+                    'Objavi oglas',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton(
+                  icon: Icon(Icons.menu_rounded, color: boje.A, size: 30),
+                  tooltip: 'Izbornik',
+                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                ),
+              ],
+            ),
+          ),
+        ),
 
-              // 2. SEARCH BAR & FILTERS
-              SliverPersistentHeader(
-                pinned: true,
-                delegate: _StickySearchDelegate(
-                  visina: _prikaziFiltere ? 335 : 80,
-                  bgColor: boje.bg!.withValues(alpha: 0.0),
+        // Prošireni filter panel (ako je uključen na ikoni filtera)
+        if (_prikaziFiltere)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(bocniPadding, 14, bocniPadding, 4),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 680),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: _prikaziFiltere
-                          ? boje.C?.withValues(alpha: 0.95)
-                          : Colors.transparent,
-                      borderRadius: const BorderRadius.all(Radius.circular(25)),
+                      color: (boje.C ?? boje.B)?.withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: (boje.A ?? Colors.black).withValues(alpha: 0.12),
+                      ),
                     ),
-                    padding: const EdgeInsets.only(
-                      left: 25,
-                      right: 25,
-                      top: 10,
-                    ),
-                    child: Column(
-                      children: [_buildSearchBar(boje), _buildFilterPanel(boje)],
-                    ),
+                    child: _buildFilterPanel(boje),
                   ),
                 ),
               ),
+            ),
+          ),
 
-              // 3. LISTA OGLASA
-              SliverPadding(
-                padding: const EdgeInsets.only(top: 5, bottom: 20),
-                sliver: FutureBuilder<List<Oglas>>(
-                  future: _oglasiFuture,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return SliverToBoxAdapter(
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(50),
-                            child: CircularProgressIndicator(color: boje.A),
-                          ),
+        // Brzi čipovi kategorija ispod tražilice
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(bocniPadding, 18, bocniPadding, 6),
+            child: _buildWebCategoryChips(boje),
+          ),
+        ),
+
+        // Mreža oglasa
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(bocniPadding, 10, bocniPadding, 32),
+          sliver: _buildOglasiSliver(boje, jeMreza: true),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWebCategoryChips(QuickJobsColors boje) {
+    final List<String> kategorije = [
+      "Sve kategorije",
+      ...kategorijeSaIkonama.keys,
+    ];
+    final String aktivna = _odabranaKategorija ?? "Sve kategorije";
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: kategorije.map((kat) {
+          final bool odabrano = aktivna == kat;
+          return Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: ChoiceChip(
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (kat != "Sve kategorije") ...[
+                    Icon(
+                      kategorijeSaIkonama[kat] ?? Icons.layers_rounded,
+                      size: 16,
+                      color: odabrano ? boje.bg : boje.A,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Text(
+                    kat,
+                    style: TextStyle(
+                      color: odabrano ? boje.bg : boje.A,
+                      fontWeight: odabrano ? FontWeight.w700 : FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+              selected: odabrano,
+              selectedColor: boje.A,
+              backgroundColor: (boje.C ?? boje.B)?.withValues(alpha: 0.8),
+              side: BorderSide(
+                color: (boje.A ?? Colors.black).withValues(alpha: 0.14),
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              onSelected: (_) {
+                setState(() {
+                  _odabranaKategorija = kat == "Sve kategorije" ? null : kat;
+                });
+                _osvjeziOglase();
+              },
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // POSTOJEĆI MOBILNI LAYOUT
+  Widget _buildMobileContent(QuickJobsColors boje, bool isDark) {
+    return CustomScrollView(
+      slivers: [
+        SliverAppBar(
+          automaticallyImplyLeading: false,
+          backgroundColor: Colors.transparent,
+          expandedHeight: 120,
+          floating: false,
+          pinned: false,
+          flexibleSpace: FlexibleSpaceBar(
+            background: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildHeaderIcon(
+                    Icons.settings_outlined,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const PostavkeEkran(dolaziIzJednostavnog: false),
+                      ),
+                    ),
+                    boje,
+                  ),
+                  _buildCentralLogo(isDark, size: 75),
+                  _buildHeaderIcon(
+                    Icons.account_box,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const KorisnickiProfil(),
+                      ),
+                    ),
+                    boje,
+                    size: 35,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _StickySearchDelegate(
+            visina: _prikaziFiltere ? 335 : 80,
+            bgColor: boje.bg!.withValues(alpha: 0.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: _prikaziFiltere
+                    ? boje.C?.withValues(alpha: 0.95)
+                    : Colors.transparent,
+                borderRadius: const BorderRadius.all(Radius.circular(25)),
+              ),
+              padding: const EdgeInsets.only(left: 25, right: 25, top: 10),
+              child: Column(
+                children: [_buildSearchBar(boje), _buildFilterPanel(boje)],
+              ),
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.only(
+            top: 5,
+            bottom: 20,
+            left: 20,
+            right: 20,
+          ),
+          sliver: _buildOglasiSliver(boje, jeMreza: false),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildOglasiSliver(QuickJobsColors boje, {required bool jeMreza}) {
+    return FutureBuilder<List<Oglas>>(
+      future: _oglasiFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return SliverToBoxAdapter(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(50),
+                child: CircularProgressIndicator(color: boje.A),
+              ),
+            ),
+          );
+        }
+        final oglasi = snapshot.data ?? [];
+        if (oglasi.isEmpty) {
+          return SliverToBoxAdapter(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(50),
+                child: Text(
+                  "Nema dostupnih oglasa.",
+                  style: TextStyle(color: boje.A),
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (jeMreza) {
+          return SliverGrid(
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 430,
+              mainAxisExtent: 190,
+              crossAxisSpacing: 20,
+              mainAxisSpacing: 20,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => _buildWebOglasCard(oglasi[index], boje),
+              childCount: oglasi.length,
+            ),
+          );
+        }
+
+        return SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _buildOglasCard(oglasi[index], boje),
+            childCount: oglasi.length,
+          ),
+        );
+      },
+    );
+  }
+
+  // WEB KARTICA OGLASA: jasniji raspored (kategorija + cijena gore, naslov/meta u sredini, datum + akcija dolje)
+  Widget _buildWebOglasCard(Oglas oglas, QuickJobsColors boje) {
+    final ikonaKategorije =
+        kategorijeSaIkonama[oglas.kategorija] ?? Icons.more_horiz_rounded;
+
+    double? izracunajUdaljenostKm() {
+      if (oglas.udaljenostKm != null) return oglas.udaljenostKm;
+      if (oglas.lat != null &&
+          oglas.lng != null &&
+          _korisnikLat != null &&
+          _korisnikLng != null) {
+        const distance = Distance();
+        final km = distance.as(
+          LengthUnit.Kilometer,
+          LatLng(_korisnikLat!, _korisnikLng!),
+          LatLng(oglas.lat!, oglas.lng!),
+        );
+        return double.parse(km.toStringAsFixed(1));
+      }
+      return null;
+    }
+
+    final udaljenost = izracunajUdaljenostKm();
+
+    return _HoverCardWrapper(
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DetaljiOglasa(oglas: oglas),
+            ),
+          );
+          _osvjeziOglase();
+        },
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: boje.C,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: (boje.A ?? Colors.black).withValues(alpha: 0.12),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Gornji red: ikona kategorije + bedž cijene
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: boje.bg?.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      );
-                    }
-                    final oglasi = snapshot.data ?? [];
-                    if (oglasi.isEmpty) {
-                      return SliverToBoxAdapter(
-                        child: Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(50),
-                            child: Text(
-                              "Nema dostupnih oglasa.",
-                              style: TextStyle(color: boje.A),
+                        child: Icon(ikonaKategorije, color: boje.A, size: 22),
+                      ),
+                      if (oglas.jeReportan) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color.fromARGB(255, 250, 122, 122),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            "Rizičan oglas",
+                            style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                      );
-                    }
-                    return SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: _buildOglasCard(oglasi[index], boje),
-                        ),
-                        childCount: oglasi.length,
+                      ],
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: boje.B,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      '${oglas.isplata}€',
+                      style: TextStyle(
+                        color: boje.A,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                ],
+              ),
+
+              // Sredina: naslov + autor i udaljenost
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    oglas.naslov,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: boje.A,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    udaljenost != null
+                        ? '${oglas.autorIme ?? 'Nepoznat autor'} · ${udaljenost.toStringAsFixed(1)} km'
+                        : (oglas.autorIme ?? 'Nepoznat autor'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: boje.A?.withValues(alpha: 0.78),
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+
+              // Dno kartice: datum i poziv na detalje
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    DateFormat('dd.MM.yyyy.').format(oglas.createdAt),
+                    style: TextStyle(
+                      color: boje.A?.withValues(alpha: 0.65),
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    'Detalji →',
+                    style: TextStyle(
+                      color: boje.A,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(boje),
+    );
+  }
+
+  Widget _buildWebDrawer(QuickJobsColors boje, bool isDark) {
+    return Drawer(
+      backgroundColor: boje.bg,
+      child: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  _buildCentralLogo(isDark, size: 48),
+                  const SizedBox(width: 12),
+                  Text(
+                    'QuickJobs',
+                    style: TextStyle(
+                      color: boje.A,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: Icon(Icons.add_circle_outline_rounded, color: boje.A),
+              title: Text(
+                'Objavi oglas',
+                style: TextStyle(color: boje.A, fontWeight: FontWeight.w600),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                await Navigator.pushNamed(context, '/ekrani/objava_oglasa');
+                _osvjeziOglase();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.chat_bubble_outline_rounded, color: boje.A),
+              title: Text(
+                'Chat',
+                style: TextStyle(color: boje.A, fontWeight: FontWeight.w600),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/ekrani/chat_hub');
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.handyman_outlined, color: boje.A),
+              title: Text(
+                'Moji poslovi',
+                style: TextStyle(color: boje.A, fontWeight: FontWeight.w600),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                await Navigator.pushNamed(context, '/ekrani/job_hub');
+                _osvjeziOglase();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.person_outline_rounded, color: boje.A),
+              title: Text(
+                'Korisnički profil',
+                style: TextStyle(color: boje.A, fontWeight: FontWeight.w600),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const KorisnickiProfil(),
+                  ),
+                );
+              },
+            ),
+            const Divider(height: 28),
+            ListTile(
+              leading: Icon(Icons.settings_outlined, color: boje.A),
+              title: Text(
+                'Postavke',
+                style: TextStyle(color: boje.A, fontWeight: FontWeight.w600),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        const PostavkeEkran(dolaziIzJednostavnog: false),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -259,47 +744,56 @@ Future<void> _dohvatiLokacijuKorisnika() async {
     );
   }
 
-  Widget _buildCentralLogo(bool isDark) {
+  Widget _buildCentralLogo(bool isDark, {double size = 75}) {
     return SvgPicture.asset(
       isDark
           ? 'assets/images/logo_darkmode.svg'
           : 'assets/images/logo_lightmode.svg',
-      width: 75,
-      height: 75,
+      width: size,
+      height: size,
       fit: BoxFit.contain,
     );
   }
 
-  Widget _buildSearchBar(QuickJobsColors boje) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
-      decoration: BoxDecoration(
-        color: boje.B,
-        borderRadius: BorderRadius.circular(25),
-      ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: (value) {
-          _searchQuery = value;
-          _osvjeziOglase();
-        },
-        style: TextStyle(color: boje.A),
-        decoration: InputDecoration(
-          icon: Icon(Icons.search, color: boje.A?.withValues(alpha: 0.7)),
-          hintText: 'Pretraži poslove...',
-          hintStyle: TextStyle(color: boje.A?.withValues(alpha: 1.0)),
-          border: InputBorder.none,
-          suffixIcon: IconButton(
-            icon: Icon(
-              _prikaziFiltere ? Icons.expand_less : Icons.tune,
-              color: boje.A,
-            ),
-            onPressed: () => setState(() => _prikaziFiltere = !_prikaziFiltere),
+Widget _buildSearchBar(QuickJobsColors boje) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 14),
+    decoration: BoxDecoration(
+      color: boje.bg,
+      borderRadius: BorderRadius.circular(25),
+    ),
+    child: TextField(
+      controller: _searchController,
+      textAlignVertical: TextAlignVertical.center,
+      onChanged: (value) {
+        _searchQuery = value;
+        _osvjeziOglase();
+      },
+      style: TextStyle(color: boje.A, fontSize: 15),
+      decoration: InputDecoration(
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(vertical: 14),
+        prefixIcon: Icon(
+          Icons.search,
+          color: boje.A?.withValues(alpha: 0.7),
+        ),
+        prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        hintText: 'Pretraži poslove...',
+        hintStyle: TextStyle(color: boje.A?.withValues(alpha: 0.75)),
+        border: InputBorder.none,
+        suffixIcon: IconButton(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          icon: Icon(
+            _prikaziFiltere ? Icons.expand_less : Icons.tune,
+            color: boje.A,
           ),
+          onPressed: () => setState(() => _prikaziFiltere = !_prikaziFiltere),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildFilterPanel(QuickJobsColors boje) {
     final List<String> stavkeKategorija = [
@@ -444,12 +938,9 @@ Future<void> _dohvatiLokacijuKorisnika() async {
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _odabranaKategorija ?? "Sve kategorije",
+                initialValue: _odabranaKategorija ?? "Sve kategorije",
                 dropdownColor: boje.C,
-                style: TextStyle(
-                  color: boje.A,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: boje.A, fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 15,
@@ -644,24 +1135,54 @@ Future<void> _dohvatiLokacijuKorisnika() async {
           IconButton(
             icon: Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: boje.A,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: boje.A, shape: BoxShape.circle),
               child: Icon(Icons.add, color: boje.bg, size: 25),
             ),
             onPressed: () =>
                 Navigator.pushNamed(context, '/ekrani/objava_oglasa'),
           ),
           IconButton(
-            icon: Icon(
-              Icons.chat,
-              size: 30,
-              color: boje.A,
-            ),
+            icon: Icon(Icons.chat, size: 30, color: boje.A),
             onPressed: () => Navigator.pushNamed(context, '/ekrani/chat_hub'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HoverCardWrapper extends StatefulWidget {
+  final Widget child;
+  final BorderRadius borderRadius;
+
+  const _HoverCardWrapper({required this.child, required this.borderRadius});
+
+  @override
+  State<_HoverCardWrapper> createState() => _HoverCardWrapperState();
+}
+
+class _HoverCardWrapperState extends State<_HoverCardWrapper> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        transform: Matrix4.translationValues(0, _hovered ? -3 : 0, 0),
+        decoration: BoxDecoration(
+          borderRadius: widget.borderRadius,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: _hovered ? 0.14 : 0.05),
+              blurRadius: _hovered ? 16 : 8,
+              offset: Offset(0, _hovered ? 8 : 3),
+            ),
+          ],
+        ),
+        child: widget.child,
       ),
     );
   }

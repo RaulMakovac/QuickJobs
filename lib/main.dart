@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'ekrani/intro.dart';
-import 'ekrani/registracija.dart'; 
+import 'ekrani/registracija.dart';
 import 'ekrani/login.dart';
 import 'ekrani/odabir.dart';
 import 'ekrani/glavni_ekran.dart';
@@ -17,26 +17,27 @@ import 'ekrani/jednostavni_ekran.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   ErrorWidget.builder = (FlutterErrorDetails details) {
     bool isOverflowError = details.toString().contains('Bottom overflowed');
     if (isOverflowError) return const SizedBox.shrink();
     return ErrorWidget(details.exception);
   };
-  
+
   // Sigurno učitavanje .env datoteke s hvatanjem greške
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
-    print('UPOZORENJE: Nije uspjelo učitavanje .env datoteke: $e');
+    debugPrint('UPOZORENJE: Nije uspjelo učitavanje .env datoteke: $e');
   }
-  
+
   // Inicijalizacija Supabasea uz sigurnu provjeru (fallback ako dotenv faila)
-  final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? 'https://ovdje-stavi-fallback-url-za-test.supabase.co';
+  final supabaseUrl =
+      dotenv.env['SUPABASE_URL'] ?? 'https://ovdje-stavi-fallback-url-za-test.supabase.co';
   final supabaseKey = dotenv.env['SUPABASE_ANON_KEY'] ?? 'fallback-anon-key';
 
   await Supabase.initialize(
-    url: supabaseUrl, 
+    url: supabaseUrl,
     anonKey: supabaseKey,
     authOptions: const FlutterAuthClientOptions(
       authFlowType: AuthFlowType.pkce,
@@ -45,7 +46,6 @@ void main() async {
 
   runApp(const MyApp());
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -58,11 +58,11 @@ class MyApp extends StatelessWidget {
       builder: (context, trenutniMod, child) {
         return MaterialApp(
           title: 'QuickJobs',
-          debugShowCheckedModeBanner: false, 
+          debugShowCheckedModeBanner: false,
           theme: lightTheme,
           darkTheme: darkTheme,
           themeMode: trenutniMod, // Ovdje sada dinamički mijenja temu
-          
+
           builder: (context, child) {
             return PozadinaKrugovi(
               child: child ?? const SizedBox(),

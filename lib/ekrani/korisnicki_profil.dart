@@ -66,8 +66,9 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
           _emailController.text = podaci.profil['email_adresa'] ?? "";
           _telefonController.text = podaci.profil['telefon'] ?? "";
           _opisController.text = podaci.profil['opis_profila'] ?? "";
-          
-          final ocjenaIzBaze = (podaci.profil['ocjena_korisnika'] as num?)?.toDouble();
+
+          final ocjenaIzBaze =
+              (podaci.profil['ocjena_korisnika'] as num?)?.toDouble();
           _prosjecnaOcjena = (ocjenaIzBaze == null) ? 0.0 : ocjenaIzBaze;
 
           _mojiOglasi = podaci.oglasi;
@@ -116,7 +117,10 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
           "Odjava",
           style: TextStyle(color: boje.A, fontWeight: FontWeight.bold),
         ),
-        content: Text("Jeste li sigurni da se želite odjaviti?", style: TextStyle(color: boje.A)),
+        content: Text(
+          "Jeste li sigurni da se želite odjaviti?",
+          style: TextStyle(color: boje.A),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -144,6 +148,8 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
   @override
   Widget build(BuildContext context) {
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool jeWeb = MediaQuery.sizeOf(context).width >= 800;
 
     if (_isLoading) {
       return Scaffold(
@@ -159,138 +165,250 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
       backgroundColor: boje.bg,
       body: PozadinaKrugovi(
         krugBoja: boje.C,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // --- NAV BAR ---
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: SafeArea(
+          child: jeWeb
+              ? _buildWebLayout(boje, isDark)
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints:
+                            BoxConstraints(minHeight: constraints.maxHeight),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(
-                                onPressed: () => Navigator.pop(context),
-                                icon: Icon(
-                                  Icons.arrow_back_ios_new,
-                                  color: boje.A,
-                                  size: 26,
-                                ),
+                              _buildMobileNavBar(boje),
+                              _buildUserHeader(boje),
+                              const SizedBox(height: 25),
+                              _buildEditableField(
+                                "Ime i prezime:",
+                                _imeController,
+                                Icons.person_outline_rounded,
+                                boje,
                               ),
-                              if (jeLiMojProfil)
-                                Row(
-                                  children: [
-                                    if (_isEditing)
-                                      IconButton(
-                                        onPressed: _spremiPromjene,
-                                        icon: const Icon(
-                                          Icons.check_circle,
-                                          color: Colors.green,
-                                          size: 28,
-                                        ),
-                                      ),
-                                    IconButton(
-                                      onPressed: () => setState(
-                                        () => _isEditing = !_isEditing,
-                                      ),
-                                      icon: Icon(
-                                        _isEditing
-                                            ? Icons.cancel_rounded
-                                            : Icons.edit_rounded,
-                                        color: boje.A,
-                                        size: 26,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      onPressed: () => _odjava(boje),
-                                      icon: const Icon(
-                                        Icons.logout_rounded,
-                                        color: Colors.redAccent,
-                                        size: 26,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              else
-                                FutureBuilder<bool>(
-                                  future: _profileService.provjeriSmijeLiReportati(
-                                    ciljaniUserId,
-                                  ),
-                                  builder: (context, snapshot) {
-                                    if (snapshot.data == true) {
-                                      return IconButton(
-                                        icon: const Icon(
-                                          Icons.flag_outlined,
-                                          color: Colors.redAccent,
-                                          size: 30,
-                                        ),
-                                        tooltip: "Reportaj korisnika",
-                                        onPressed: () =>
-                                            _prikaziDijalogZaReportProfila(
-                                              context,
-                                              ciljaniUserId,
-                                              boje,
-                                            ),
-                                      );
-                                    }
-                                    return const SizedBox.shrink();
-                                  },
-                                ),
+                              _buildEditableField(
+                                "E-mail adresa:",
+                                _emailController,
+                                Icons.mail_outline_rounded,
+                                boje,
+                                enabled: false,
+                              ),
+                              _buildEditableField(
+                                "Broj telefona:",
+                                _telefonController,
+                                Icons.phone_android_rounded,
+                                boje,
+                              ),
+                              _buildAboutMeField(boje),
+                              if (_mojiOglasi.isNotEmpty) ...[
+                                const SizedBox(height: 25),
+                                _buildIzdaniPoslovi(boje),
+                              ],
+                              const SizedBox(height: 25),
+                              _buildRecenzijeSekcija(boje),
+                              const SizedBox(height: 10),
                             ],
                           ),
                         ),
-
-                        _buildUserHeader(boje),
-                        const SizedBox(height: 25),
-                        _buildEditableField(
-                          "Ime i prezime:",
-                          _imeController,
-                          Icons.person_outline_rounded,
-                          boje,
-                        ),
-                        _buildEditableField(
-                          "E-mail adresa:",
-                          _emailController,
-                          Icons.mail_outline_rounded,
-                          boje,
-                          enabled: false,
-                        ),
-                        _buildEditableField(
-                          "Broj telefona:",
-                          _telefonController,
-                          Icons.phone_android_rounded,
-                          boje,
-                        ),
-                        _buildAboutMeField(boje),
-
-                        // --- IZDANI POSLOVI ---
-                        if (_mojiOglasi.isNotEmpty) ...[
-                          const SizedBox(height: 25),
-                          _buildIzdaniPoslovi(boje),
-                        ],
-
-                        // --- RECENZIJE ---
-                        const SizedBox(height: 25),
-                        _buildRecenzijeSekcija(boje),
-
-                        const SizedBox(height: 10),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 ),
-              ),
-            );
-          },
         ),
       ),
+    );
+  }
+
+  Widget _buildWebLayout(QuickJobsColors boje, bool isDark) {
+    final Color boxPozadina = isDark
+        ? (boje.A ?? Colors.black).withValues(alpha: 0.08)
+        : (boje.A ?? Colors.black).withValues(alpha: 0.10);
+
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
+          decoration: BoxDecoration(
+            color: (boje.C ?? boje.B)?.withValues(alpha: 1.0),
+            border: Border(
+              bottom: BorderSide(
+                color: (boje.A ?? Colors.black).withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.arrow_back_rounded, color: boje.A),
+                    tooltip: 'Natrag',
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    jeLiMojProfil ? 'Moj profil' : 'Korisnički profil',
+                    style: TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                      color: boje.A,
+                    ),
+                  ),
+                ],
+              ),
+              _buildProfileActions(boje),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 28),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1080),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Lijeva kolona: osnovni podaci i kontakt
+                    Expanded(
+                      flex: 5,
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: boxPozadina,
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildUserHeader(boje),
+                            const SizedBox(height: 24),
+                            _buildEditableField(
+                              "Ime i prezime:",
+                              _imeController,
+                              Icons.person_outline_rounded,
+                              boje,
+                            ),
+                            _buildEditableField(
+                              "E-mail adresa:",
+                              _emailController,
+                              Icons.mail_outline_rounded,
+                              boje,
+                              enabled: false,
+                            ),
+                            _buildEditableField(
+                              "Broj telefona:",
+                              _telefonController,
+                              Icons.phone_android_rounded,
+                              boje,
+                            ),
+                            _buildAboutMeField(boje),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 24),
+                    // Desna kolona: izdani poslovi i recenzije
+                    Expanded(
+                      flex: 6,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_mojiOglasi.isNotEmpty) ...[
+                            _buildIzdaniPoslovi(boje),
+                            const SizedBox(height: 24),
+                          ],
+                          _buildRecenzijeSekcija(boje),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileNavBar(QuickJobsColors boje) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: Icon(
+              Icons.arrow_back_ios_new,
+              color: boje.A,
+              size: 26,
+            ),
+          ),
+          _buildProfileActions(boje),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileActions(QuickJobsColors boje) {
+    if (jeLiMojProfil) {
+      return Row(
+        children: [
+          if (_isEditing)
+            IconButton(
+              onPressed: _spremiPromjene,
+              icon: const Icon(
+                Icons.check_circle,
+                color: Colors.green,
+                size: 28,
+              ),
+            ),
+          IconButton(
+            onPressed: () => setState(() => _isEditing = !_isEditing),
+            icon: Icon(
+              _isEditing ? Icons.cancel_rounded : Icons.edit_rounded,
+              color: boje.A,
+              size: 26,
+            ),
+          ),
+          IconButton(
+            onPressed: () => _odjava(boje),
+            icon: const Icon(
+              Icons.logout_rounded,
+              color: Colors.redAccent,
+              size: 26,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return FutureBuilder<bool>(
+      future: _profileService.provjeriSmijeLiReportati(ciljaniUserId),
+      builder: (context, snapshot) {
+        if (snapshot.data == true) {
+          return IconButton(
+            icon: const Icon(
+              Icons.flag_outlined,
+              color: Colors.redAccent,
+              size: 30,
+            ),
+            tooltip: "Reportaj korisnika",
+            onPressed: () => _prikaziDijalogZaReportProfila(
+              context,
+              ciljaniUserId,
+              boje,
+            ),
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 
@@ -327,7 +445,11 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Icon(Icons.star_rounded, color: Colors.amber, size: 24),
+                      const Icon(
+                        Icons.star_rounded,
+                        color: Colors.amber,
+                        size: 24,
+                      ),
                     ],
                   )
                 : Text(
@@ -369,7 +491,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(ikona, color: boje.A, size: 14), 
+                Icon(ikona, color: boje.A, size: 14),
                 const SizedBox(width: 6),
                 Text(
                   label,
@@ -593,7 +715,8 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                     Center(
                       child: TextButton.icon(
                         onPressed: () => setState(
-                            () => _prikaziSveRecenzije = !_prikaziSveRecenzije),
+                          () => _prikaziSveRecenzije = !_prikaziSveRecenzije,
+                        ),
                         icon: Icon(
                           _prikaziSveRecenzije
                               ? Icons.keyboard_arrow_up
@@ -687,7 +810,11 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
     );
   }
 
-  void _prikaziDijalogZaReportProfila(BuildContext context, String korisnikId, QuickJobsColors boje) {
+  void _prikaziDijalogZaReportProfila(
+    BuildContext context,
+    String korisnikId,
+    QuickJobsColors boje,
+  ) {
     String privremeniRazlog = "Scam / Neisplata";
     final komentarController = TextEditingController();
 
@@ -718,7 +845,7 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
               ),
               const SizedBox(height: 15),
               DropdownButtonFormField<String>(
-                value: privremeniRazlog,
+                initialValue: privremeniRazlog,
                 dropdownColor: boje.C,
                 style: TextStyle(color: boje.A, fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
@@ -735,7 +862,12 @@ class _KorisnickiProfilState extends State<KorisnickiProfil> {
                   "Neprimjereno ponašanje",
                   "Ostalo",
                 ]
-                    .map((r) => DropdownMenuItem(value: r, child: Text(r, style: TextStyle(color: boje.A))))
+                    .map(
+                      (r) => DropdownMenuItem(
+                        value: r,
+                        child: Text(r, style: TextStyle(color: boje.A)),
+                      ),
+                    )
                     .toList(),
                 onChanged: (v) {
                   if (v != null) {

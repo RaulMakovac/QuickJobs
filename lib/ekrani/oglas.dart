@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import '../services/oglas_service.dart';
 import '../services/prijava_service.dart';
@@ -20,6 +23,8 @@ class DetaljiOglasa extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final boje = Theme.of(context).extension<QuickJobsColors>()!;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final bool jeWeb = MediaQuery.sizeOf(context).width >= 800;
     final bool imaLokaciju =
         (oglas.lat != null && oglas.lng != null) ||
         oglas.adresa.trim().isNotEmpty;
@@ -30,119 +35,232 @@ class DetaljiOglasa extends StatelessWidget {
         krugBoja: boje.C,
         child: SafeArea(
           bottom: false,
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(25, 25, 25, 200),
-            child: Column(
-              children: [
-                _buildAppBar(context, boje),
-                const SizedBox(height: 35),
-                _buildJobTitleHeader(boje),
+          child: jeWeb
+              ? _buildWebView(context, boje, isDark, imaLokaciju)
+              : _buildMobileView(context, boje, imaLokaciju),
+        ),
+      ),
+    );
+  }
 
-                const SizedBox(height: 15),
-                _buildKategorijaBadge(boje),
+  Widget _buildWebView(
+    BuildContext context,
+    QuickJobsColors boje,
+    bool isDark,
+    bool imaLokaciju,
+  ) {
+    final Color boxPozadina = isDark
+        ? (boje.A ?? Colors.black).withValues(alpha: 0.08)
+        : (boje.A ?? Colors.black).withValues(alpha: 0.10);
 
-                // UPOZORENJE ZAJEDNICE (REPORTS)
-                if (oglas.jeReportan) ...[
-                  const SizedBox(height: 25),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: boje.B?.withValues(alpha: 0.9),
-                      border: Border.all(color: Colors.red, width: 1.5),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (boje.A ?? Colors.black).withValues(
-                            alpha: 0.12,
-                          ),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.gavel_rounded, color: boje.A, size: 28),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Upozorenje zajednice",
-                                style: TextStyle(
-                                  color: boje.A,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                "Ovaj oglas je reportan od strane zajednice zbog sumnje na kršenje pravila ili prijevaru. Postupajte s oprezom!",
-                                style: TextStyle(
-                                  color: boje.A?.withValues(alpha: 0.85),
-                                  fontSize: 13,
-                                  height: 1.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 16),
+          decoration: BoxDecoration(
+            color: (boje.C ?? boje.B)?.withValues(alpha: 1.0),
+            border: Border(
+              bottom: BorderSide(
+                color: (boje.A ?? Colors.black).withValues(alpha: 0.12),
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.arrow_back_rounded, color: boje.A),
+                    tooltip: 'Natrag',
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Opis oglasa',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: boje.A,
                     ),
                   ),
                 ],
-
-                const SizedBox(height: 25),
-                _buildAuthorSection(context, boje),
-
-                const SizedBox(height: 25),
-                _buildDetailRow(
-                  'Adresa: ${oglas.adresa}',
-                  Icons.location_on_rounded,
-                  boje,
-                  trailingIcon: imaLokaciju ? Icons.map_rounded : null,
-                  onTap: imaLokaciju
-                      ? () => _otvoriKartuOglasa(context, boje)
-                      : null,
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.flag_outlined,
+                  color: Colors.redAccent,
+                  size: 28,
                 ),
-                const SizedBox(height: 12),
-                _buildDetailRow(
-                  'Isplata: ${oglas.isplata}€',
-                  Icons.euro_rounded,
-                  boje,
-                ),
-
-                const SizedBox(height: 25),
-                _buildDescriptionCard(boje),
-
-                const SizedBox(height: 45),
-
-                if (samoPregled)
-                  Column(
-                    children: [
-                      Icon(Icons.info_outline, color: boje.A, size: 40),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Pregled aktivne prijave',
-                        style: TextStyle(
-                          color: boje.A,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
+                tooltip: "Prijavi oglas",
+                onPressed: () => _prikaziDijalogZaPrijavuOglasa(context, boje),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 780),
+                child: Container(
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: boxPozadina,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: (boje.A ?? Colors.black).withValues(
+                        alpha: isDark ? 0.18 : 0.12,
                       ),
-                    ],
-                  )
-                else
-                  _buildApplyButton(context, boje),
-              ],
+                    ),
+                  ),
+                  child: _buildDetaljiSadrzaj(
+                    context,
+                    boje,
+                    imaLokaciju,
+                    pokaziMobilniAppBar: false,
+                  ),
+                ),
+              ),
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildMobileView(
+    BuildContext context,
+    QuickJobsColors boje,
+    bool imaLokaciju,
+  ) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(25, 25, 25, 200),
+      child: _buildDetaljiSadrzaj(
+        context,
+        boje,
+        imaLokaciju,
+        pokaziMobilniAppBar: true,
       ),
+    );
+  }
+
+  Widget _buildDetaljiSadrzaj(
+    BuildContext context,
+    QuickJobsColors boje,
+    bool imaLokaciju, {
+    required bool pokaziMobilniAppBar,
+  }) {
+    return Column(
+      children: [
+        if (pokaziMobilniAppBar) ...[
+          _buildAppBar(context, boje),
+          const SizedBox(height: 35),
+        ],
+        _buildJobTitleHeader(boje),
+
+        const SizedBox(height: 15),
+        _buildKategorijaBadge(boje),
+
+        // UPOZORENJE ZAJEDNICE (REPORTS)
+        if (oglas.jeReportan) ...[
+          const SizedBox(height: 25),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: boje.B?.withValues(alpha: 0.9),
+              border: Border.all(color: Colors.red, width: 1.5),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: (boje.A ?? Colors.black).withValues(
+                    alpha: 0.12,
+                  ),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.gavel_rounded, color: boje.A, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Upozorenje zajednice",
+                        style: TextStyle(
+                          color: boje.A,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Ovaj oglas je reportan od strane zajednice zbog sumnje na kršenje pravila ili prijevaru. Postupajte s oprezom!",
+                        style: TextStyle(
+                          color: boje.A?.withValues(alpha: 0.85),
+                          fontSize: 13,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 25),
+        _buildAuthorSection(context, boje),
+
+        const SizedBox(height: 25),
+        _buildDetailRow(
+          'Adresa: ${oglas.adresa}',
+          Icons.location_on_rounded,
+          boje,
+          trailingIcon: imaLokaciju ? Icons.map_rounded : null,
+          onTap: imaLokaciju
+              ? () => _otvoriKartuOglasa(context, boje)
+              : null,
+        ),
+        const SizedBox(height: 12),
+        _buildDetailRow(
+          'Isplata: ${oglas.isplata}€',
+          Icons.euro_rounded,
+          boje,
+        ),
+
+        const SizedBox(height: 25),
+        _buildDescriptionCard(boje),
+
+        const SizedBox(height: 45),
+
+        if (samoPregled)
+          Column(
+            children: [
+              Icon(Icons.info_outline, color: boje.A, size: 40),
+              const SizedBox(height: 10),
+              Text(
+                'Pregled aktivne prijave',
+                style: TextStyle(
+                  color: boje.A,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          )
+        else
+          _buildApplyButton(context, boje),
+      ],
     );
   }
 
@@ -155,10 +273,42 @@ class DetaljiOglasa extends StatelessWidget {
     if (oglas.lat != null && oglas.lng != null) {
       tocka = LatLng(oglas.lat!, oglas.lng!);
     } else if (oglas.adresa.trim().isNotEmpty) {
+      final adresa = oglas.adresa.trim();
       try {
-        final lokacije = await locationFromAddress(oglas.adresa.trim());
-        if (lokacije.isNotEmpty) {
-          tocka = LatLng(lokacije.first.latitude, lokacije.first.longitude);
+        if (!kIsWeb) {
+          final lokacije = await locationFromAddress(adresa);
+          if (lokacije.isNotEmpty) {
+            tocka = LatLng(lokacije.first.latitude, lokacije.first.longitude);
+          }
+        }
+
+        if (tocka == null) {
+          final uri = Uri.https(
+            'nominatim.openstreetmap.org',
+            '/search',
+            {
+              'q': adresa,
+              'format': 'json',
+              'limit': '1',
+            },
+          );
+          final response = await http.get(
+            uri,
+            headers: {
+              'User-Agent': 'QuickJobsApp/1.0 (contact@quickjobs.hr)',
+            },
+          );
+          if (response.statusCode == 200) {
+            final results = jsonDecode(response.body) as List<dynamic>;
+            if (results.isNotEmpty) {
+              final first = results.first as Map<String, dynamic>;
+              final lat = double.tryParse(first['lat']?.toString() ?? '');
+              final lon = double.tryParse(first['lon']?.toString() ?? '');
+              if (lat != null && lon != null) {
+                tocka = LatLng(lat, lon);
+              }
+            }
+          }
         }
       } catch (e) {
         debugPrint("Greška pri geokodiranju adrese: $e");
@@ -177,6 +327,126 @@ class DetaljiOglasa extends StatelessWidget {
     }
 
     final LatLng prikazanaTocka = tocka;
+    final MapController kartaController = MapController();
+    final bool jeWeb = MediaQuery.sizeOf(context).width >= 800;
+
+    Widget buildKartaPanel(BuildContext panelContext) {
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+            child: Row(
+              children: [
+                Icon(Icons.location_on_rounded, color: boje.A),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    oglas.adresa.isNotEmpty
+                        ? oglas.adresa
+                        : 'Lokacija posla',
+                    style: TextStyle(
+                      color: boje.A,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Centriraj na lokaciju',
+                  onPressed: () {
+                    kartaController.move(prikazanaTocka, 15.5);
+                  },
+                  icon: Icon(Icons.my_location_rounded, color: boje.A),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(panelContext),
+                  icon: Icon(Icons.close, color: boje.A),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: FlutterMap(
+                  mapController: kartaController,
+                  options: MapOptions(
+                    initialCenter: prikazanaTocka,
+                    initialZoom: 15.5,
+                    onMapReady: () {
+                      kartaController.move(prikazanaTocka, 15.5);
+                    },
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.quickjobs.app',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: prikazanaTocka,
+                          width: 48,
+                          height: 48,
+                          alignment: Alignment.topCenter,
+                          child: const Icon(
+                            Icons.location_pin,
+                            size: 48,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (jeWeb) {
+      showGeneralDialog(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: 'Lokacija oglasa',
+        barrierColor: Colors.black54,
+        transitionDuration: const Duration(milliseconds: 180),
+        pageBuilder: (dialogContext, _, __) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Material(
+                color: boje.bg,
+                elevation: 14,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  side: BorderSide(
+                    color: (boje.A ?? Colors.black).withValues(alpha: 0.22),
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: SizedBox(
+                  width: 780,
+                  height: 560,
+                  child: buildKartaPanel(dialogContext),
+                ),
+              ),
+            ),
+          );
+        },
+        transitionBuilder: (_, animation, __, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      );
+      return;
+    }
 
     showModalBottomSheet(
       context: context,
@@ -188,74 +458,7 @@ class DetaljiOglasa extends StatelessWidget {
       builder: (modalContext) {
         return SizedBox(
           height: MediaQuery.of(modalContext).size.height * 0.65,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
-                child: Row(
-                  children: [
-                    Icon(Icons.location_on_rounded, color: boje.A),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        oglas.adresa.isNotEmpty
-                            ? oglas.adresa
-                            : 'Lokacija posla',
-                        style: TextStyle(
-                          color: boje.A,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(modalContext),
-                      icon: Icon(Icons.close, color: boje.A),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: FlutterMap(
-                      options: MapOptions(
-                        initialCenter: prikazanaTocka,
-                        initialZoom: 15.5,
-                      ),
-                      children: [
-                        TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          subdomains: const ['a', 'b', 'c', 'd'],
-                          userAgentPackageName: 'com.quickjobs.app',
-                        ),
-                        MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: prikazanaTocka, // tvoja LatLng koordinata
-                              width: 48,
-                              height: 48,
-                              alignment: Alignment.topCenter,
-                              child: Icon(
-                                Icons.location_pin,
-                                size: 48,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          child: buildKartaPanel(modalContext),
         );
       },
     );
