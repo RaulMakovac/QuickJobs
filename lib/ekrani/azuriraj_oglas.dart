@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import '../dekor.dart';
 import '../services/oglas_service.dart';
@@ -45,6 +48,85 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
     super.dispose();
   }
 
+  Future<String?> _dohvatiAdresuZaTocku(LatLng tocka) async {
+    try {
+      if (!kIsWeb) {
+        final placemarks = await placemarkFromCoordinates(
+          tocka.latitude,
+          tocka.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          final p = placemarks.first;
+          final dijelovi = [p.street, p.postalCode, p.locality]
+              .where((e) => e != null && e.trim().isNotEmpty)
+              .cast<String>()
+              .toList();
+          if (dijelovi.isNotEmpty) {
+            return dijelovi.join(', ');
+          }
+        }
+      }
+
+      final uri = Uri.https(
+        'nominatim.openstreetmap.org',
+        '/reverse',
+        {
+          'lat': tocka.latitude.toString(),
+          'lon': tocka.longitude.toString(),
+          'format': 'json',
+          'addressdetails': '1',
+          'zoom': '18',
+          'accept-language': 'hr',
+        },
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'User-Agent': 'QuickJobsApp/1.0 (contact@quickjobs.hr)',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final address = data['address'] as Map<String, dynamic>?;
+
+        if (address != null) {
+          final ulica = (address['road'] ?? address['pedestrian'] ?? '')
+              .toString()
+              .trim();
+          final kucniBroj = (address['house_number'] ?? '').toString().trim();
+          final ulicaIBroj = [ulica, kucniBroj]
+              .where((s) => s.isNotEmpty)
+              .join(' ');
+          final postanski = (address['postcode'] ?? '').toString().trim();
+          final mjesto = (address['city'] ??
+                  address['town'] ??
+                  address['village'] ??
+                  address['municipality'] ??
+                  '')
+              .toString()
+              .trim();
+
+          final dijelovi = [ulicaIBroj, postanski, mjesto]
+              .where((s) => s.isNotEmpty)
+              .toList();
+          if (dijelovi.isNotEmpty) {
+            return dijelovi.join(', ');
+          }
+        }
+
+        final displayName = data['display_name']?.toString().trim();
+        if (displayName != null && displayName.isNotEmpty) {
+          return displayName;
+        }
+      }
+    } catch (e) {
+      debugPrint("Greška pri dohvaćanju adrese: $e");
+    }
+    return null;
+  }
+
   Future<void> _odaberiLokacijuNaMapi(QuickJobsColors boje) async {
     LatLng pocetnaTocka = const LatLng(45.3271, 14.4422);
 
@@ -52,14 +134,16 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
       pocetnaTocka = LatLng(_odabraniLat!, _odabraniLng!);
     } else if (_adresaController.text.trim().isNotEmpty) {
       try {
-        final lokacije = await locationFromAddress(
-          _adresaController.text.trim(),
-        );
-        if (lokacije.isNotEmpty) {
-          pocetnaTocka = LatLng(
-            lokacije.first.latitude,
-            lokacije.first.longitude,
+        if (!kIsWeb) {
+          final lokacije = await locationFromAddress(
+            _adresaController.text.trim(),
           );
+          if (lokacije.isNotEmpty) {
+            pocetnaTocka = LatLng(
+              lokacije.first.latitude,
+              lokacije.first.longitude,
+            );
+          }
         }
       } catch (_) {}
     }
@@ -132,25 +216,15 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
                           setModalState(() {
                             privremenaTocka = point;
                           });
-                          try {
-                            final placemarks = await placemarkFromCoordinates(
-                              point.latitude,
-                              point.longitude,
-                            );
-                            if (placemarks.isNotEmpty) {
-                              final p = placemarks.first;
-                              final dijelovi = [p.street, p.locality]
-                                  .where(
-                                    (e) => e != null && e.trim().isNotEmpty,
-                                  )
-                                  .toList();
-                              if (dijelovi.isNotEmpty) {
-                                setModalState(() {
-                                  privremenaAdresa = dijelovi.join(', ');
-                                });
-                              }
-                            }
-                          } catch (_) {}
+                          final pronadjenaAdresa =
+                              await _dohvatiAdresuZaTocku(point);
+                          if (pronadjenaAdresa != null &&
+                              pronadjenaAdresa.isNotEmpty &&
+                              context.mounted) {
+                            setModalState(() {
+                              privremenaAdresa = pronadjenaAdresa;
+                            });
+                          }
                         },
                       ),
                       children: [
@@ -277,6 +351,8 @@ class _AzurirajOglasState extends State<AzurirajOglas> {
         opis: _opisController.text,
         isplata: _isplataController.text,
         adresa: _adresaController.text,
+        lat: _odabraniLat,
+        lng: _odabraniLng,
       );
 
       if (mounted) {

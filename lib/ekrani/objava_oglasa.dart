@@ -495,11 +495,14 @@ class _OdabirLokacijeEkranState extends State<_OdabirLokacijeEkran> {
 
       final uri = Uri.https(
         'nominatim.openstreetmap.org',
-        '/search',
+        '/reverse',
         {
-          'q': adresa,
+          'lat': _trenutnaTocka.latitude.toString(),
+          'lon': _trenutnaTocka.longitude.toString(),
           'format': 'json',
-          'limit': '1',
+          'addressdetails': '1',
+          'zoom': '18',
+          'accept-language': 'hr',
         },
       );
 

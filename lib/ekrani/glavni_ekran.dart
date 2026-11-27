@@ -756,11 +756,19 @@ class _glavni_ekranState extends State<glavni_ekran> {
   }
 
 Widget _buildSearchBar(QuickJobsColors boje) {
+  final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 14),
     decoration: BoxDecoration(
       color: boje.bg,
       borderRadius: BorderRadius.circular(25),
+      border: Border.all(
+        color: (boje.A ?? Colors.black).withValues(
+          alpha: isDark ? 0.25 : 0.28,
+        ),
+        width: 1.8,
+      ),
     ),
     child: TextField(
       controller: _searchController,

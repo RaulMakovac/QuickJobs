@@ -651,9 +651,14 @@ class DetaljiOglasa extends StatelessWidget {
   }
 
   Widget _buildJobTitleHeader(QuickJobsColors boje) {
+    final bool dugNaslov = oglas.naslov.trim().length > 42;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+      padding: EdgeInsets.symmetric(
+        horizontal: 24,
+        vertical: dugNaslov ? 20 : 14,
+      ),
       decoration: BoxDecoration(
         color: boje.A,
         borderRadius: BorderRadius.circular(25),
@@ -663,23 +668,31 @@ class DetaljiOglasa extends StatelessWidget {
         textAlign: TextAlign.center,
         style: TextStyle(
           color: boje.bg,
-          fontSize: 20,
+          fontSize: dugNaslov ? 18 : 20,
           fontWeight: FontWeight.bold,
+          height: 1.25,
         ),
       ),
     );
   }
 
   Widget _buildDescriptionCard(QuickJobsColors boje) {
+    final String tekstOpisa = oglas.opis.trim().isEmpty
+        ? 'Nema opisa.'
+        : oglas.opis.trim();
+    final bool dugOpis = tekstOpisa.length > 220;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      constraints: BoxConstraints(minHeight: dugOpis ? 140 : 88),
+      padding: EdgeInsets.all(dugOpis ? 24 : 18),
       decoration: BoxDecoration(
         color: boje.C,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             "Detaljni opis posla:",
@@ -689,10 +702,14 @@ class DetaljiOglasa extends StatelessWidget {
               fontSize: 13,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: dugOpis ? 10 : 6),
           Text(
-            oglas.opis.isEmpty ? 'Nema opisa.' : oglas.opis,
-            style: TextStyle(color: boje.A, fontSize: 15, height: 1.4),
+            tekstOpisa,
+            style: TextStyle(
+              color: boje.A,
+              fontSize: 15,
+              height: dugOpis ? 1.5 : 1.35,
+            ),
           ),
         ],
       ),
@@ -733,14 +750,22 @@ class DetaljiOglasa extends StatelessWidget {
     IconData? trailingIcon,
     VoidCallback? onTap,
   }) {
+    final bool viseredniTekst = text.trim().length > 36;
+
     final rowContent = Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      padding: EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: viseredniTekst ? 16 : 12,
+      ),
       decoration: BoxDecoration(
         color: boje.C,
         borderRadius: BorderRadius.circular(15),
       ),
       child: Row(
+        crossAxisAlignment: viseredniTekst
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.center,
         children: [
           Icon(icon, color: boje.A, size: 20),
           const SizedBox(width: 15),
@@ -751,6 +776,7 @@ class DetaljiOglasa extends StatelessWidget {
                 color: boje.A,
                 fontWeight: FontWeight.w600,
                 fontSize: 15,
+                height: viseredniTekst ? 1.35 : 1.2,
               ),
             ),
           ),
